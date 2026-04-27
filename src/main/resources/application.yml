@@ -1,9 +1,13 @@
 spring:
+  profiles:
+    active: local   # 기본 프로필: local (개발 환경)
+
   datasource:
-    url: jdbc:mysql://localhost:3306/maplestory_ledger?characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+    url: jdbc:mysql://localhost:3306/maple_planner?characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
     username: root
     password: password
     driver-class-name: com.mysql.cj.jdbc.Driver
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -13,14 +17,15 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
     defer-datasource-initialization: true
+
   sql:
     init:
       mode: always
       encoding: UTF-8
 
 jwt:
-  secret: maplestory-ledger-jwt-secret-key-must-be-at-least-256-bits-long-for-hs256
-  expiration: 604800000
+  secret: mapleplanner-jwt-secret-key-must-be-at-least-256-bits-long-for-hs256
+  expiration: 604800000   # 7일 (ms)
 
 server:
   port: 8080

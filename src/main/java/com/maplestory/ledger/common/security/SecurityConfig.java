@@ -69,7 +69,12 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedOriginPatterns(List.of(
+            "http://localhost:5173",  // Vite 개발 서버
+            "http://localhost:3000",  // CRA / Next.js 개발 서버
+            "https://*.vercel.app",   // Vercel 배포 도메인
+            "https://*.netlify.app"   // Netlify 배포 도메인
+        ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
