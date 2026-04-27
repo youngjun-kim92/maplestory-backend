@@ -2,8 +2,12 @@ package com.maplestory.ledger.ledger.presentation;
 
 import com.maplestory.ledger.common.security.CustomUserDetails;
 import com.maplestory.ledger.ledger.application.LedgerService;
-import com.maplestory.ledger.ledger.infrastructure.projection.WeeklySummaryProjection;
+import com.maplestory.ledger.ledger.application.command.AddLedgerEntryCommand;
+import com.maplestory.ledger.ledger.presentation.dto.AddEntryResponse;
+import com.maplestory.ledger.ledger.presentation.dto.CategoryStatResponse;
 import com.maplestory.ledger.ledger.presentation.dto.LedgerEntryRequest;
+import com.maplestory.ledger.ledger.presentation.dto.WeekSummaryResponse;
+import com.maplestory.ledger.ledger.presentation.dto.WeeklyLedgerResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -14,7 +18,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/ledger")
@@ -23,20 +26,19 @@ public class LedgerController {
 
     private final LedgerService ledgerService;
 
-    /** 기능 #2: 목요일 기준 주간 가계부 조회 */
     @GetMapping
-    public ResponseEntity<Map<String, Object>> getWeeklyLedger(
+    public ResponseEntity<WeeklyLedgerResponse> getWeeklyLedger(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate week) {
         return ResponseEntity.ok(ledgerService.getWeeklyLedger(userDetails.getUserId(), week));
     }
 
     @PostMapping
-    public ResponseEntity<Map<String, Object>> addEntry(
+    public ResponseEntity<AddEntryResponse> addEntry(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody LedgerEntryRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ledgerService.addEntry(userDetails.getUserId(), req));
+                .body(ledgerService.addEntry(userDetails.getUserId(), AddLedgerEntryCommand.from(req)));
     }
 
     @DeleteMapping("/{id}")
@@ -48,13 +50,13 @@ public class LedgerController {
     }
 
     @GetMapping("/weeks")
-    public ResponseEntity<List<WeeklySummaryProjection>> getWeeksList(
+    public ResponseEntity<List<WeekSummaryResponse>> getWeeksList(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         return ResponseEntity.ok(ledgerService.getWeeksList(userDetails.getUserId()));
     }
 
     @GetMapping("/stats")
-    public ResponseEntity<List<Object[]>> getCategoryStats(
+    public ResponseEntity<List<CategoryStatResponse>> getCategoryStats(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(defaultValue = "4") int weeks) {
         return ResponseEntity.ok(ledgerService.getCategoryStats(userDetails.getUserId(), weeks));

@@ -2,9 +2,9 @@ package com.maplestory.ledger.goal.presentation;
 
 import com.maplestory.ledger.common.security.CustomUserDetails;
 import com.maplestory.ledger.goal.application.GoalService;
-import com.maplestory.ledger.goal.domain.Goal;
 import com.maplestory.ledger.goal.presentation.dto.GoalEstimateResponse;
 import com.maplestory.ledger.goal.presentation.dto.GoalRequest;
+import com.maplestory.ledger.goal.presentation.dto.GoalResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,9 +21,8 @@ public class GoalController {
 
     private final GoalService goalService;
 
-    /** 기능 #6: 목표 아이템 등록 */
     @PostMapping
-    public ResponseEntity<Goal> createGoal(
+    public ResponseEntity<GoalResponse> createGoal(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody GoalRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -31,13 +30,13 @@ public class GoalController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Goal>> getGoals(
+    public ResponseEntity<List<GoalResponse>> getGoals(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         return ResponseEntity.ok(goalService.getGoals(userDetails.getUserId()));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Goal> updateGoal(
+    public ResponseEntity<GoalResponse> updateGoal(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id,
             @Valid @RequestBody GoalRequest req) {
@@ -53,13 +52,12 @@ public class GoalController {
     }
 
     @PatchMapping("/{id}/achieve")
-    public ResponseEntity<Goal> markAchieved(
+    public ResponseEntity<GoalResponse> markAchieved(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id) {
         return ResponseEntity.ok(goalService.markAchieved(userDetails.getUserId(), id));
     }
 
-    /** 기능 #6: 평균 수익 기반 목표 달성 예상 기간 조회 */
     @GetMapping("/{id}/estimate")
     public ResponseEntity<GoalEstimateResponse> getGoalEstimate(
             @AuthenticationPrincipal CustomUserDetails userDetails,

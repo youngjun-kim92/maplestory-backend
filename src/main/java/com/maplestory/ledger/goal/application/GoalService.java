@@ -3,19 +3,17 @@ package com.maplestory.ledger.goal.application;
 import com.maplestory.ledger.auth.infrastructure.UserRepository;
 import com.maplestory.ledger.auth.domain.User;
 import com.maplestory.ledger.common.exception.ResourceNotFoundException;
-import com.maplestory.ledger.common.util.WeekUtil;
 import com.maplestory.ledger.goal.domain.Goal;
 import com.maplestory.ledger.goal.infrastructure.GoalRepository;
 import com.maplestory.ledger.goal.presentation.dto.GoalEstimateResponse;
 import com.maplestory.ledger.goal.presentation.dto.GoalRequest;
-import com.maplestory.ledger.ledger.infrastructure.LedgerEntryRepository;
-import com.maplestory.ledger.ledger.infrastructure.projection.WeeklyNetProjection;
+import com.maplestory.ledger.goal.presentation.dto.GoalResponse;
+import com.maplestory.ledger.ledger.application.LedgerQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,55 +23,44 @@ public class GoalService {
 
     private final GoalRepository goalRepository;
     private final UserRepository userRepository;
-    private final LedgerEntryRepository ledgerEntryRepository;
+    private final LedgerQueryService ledgerQueryService;
 
     @Transactional
-    public Goal createGoal(Long userId, GoalRequest req) {
+    public GoalResponse createGoal(Long userId, GoalRequest req) {
         User user = userRepository.getReferenceById(userId);
-        Goal goal = new Goal();
-        goal.setUser(user);
-        goal.setItemName(req.itemName());
-        goal.setTargetAmount(req.targetAmount());
-        return goalRepository.save(goal);
+        return GoalResponse.from(goalRepository.save(Goal.create(user, req.itemName(), req.targetAmount())));
     }
 
     @Transactional(readOnly = true)
-    public List<Goal> getGoals(Long userId) {
-        return goalRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    public List<GoalResponse> getGoals(Long userId) {
+        return goalRepository.findByUserIdOrderByCreatedAtDesc(userId)
+                .stream().map(GoalResponse::from).toList();
     }
 
     @Transactional
-    public Goal updateGoal(Long userId, Long goalId, GoalRequest req) {
-        Goal goal = goalRepository.findByIdAndUserId(goalId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("목표를 찾을 수 없습니다."));
-        goal.setItemName(req.itemName());
-        goal.setTargetAmount(req.targetAmount());
-        return goalRepository.save(goal);
+    public GoalResponse updateGoal(Long userId, Long goalId, GoalRequest req) {
+        Goal goal = findGoal(userId, goalId);
+        goal.update(req.itemName(), req.targetAmount());
+        return GoalResponse.from(goalRepository.save(goal));
     }
 
     @Transactional
     public void deleteGoal(Long userId, Long goalId) {
-        Goal goal = goalRepository.findByIdAndUserId(goalId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("목표를 찾을 수 없습니다."));
-        goalRepository.delete(goal);
+        goalRepository.delete(findGoal(userId, goalId));
     }
 
     @Transactional
-    public Goal markAchieved(Long userId, Long goalId) {
-        Goal goal = goalRepository.findByIdAndUserId(goalId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("목표를 찾을 수 없습니다."));
-        goal.setIsAchieved(true);
-        goal.setAchievedAt(LocalDateTime.now());
-        return goalRepository.save(goal);
+    public GoalResponse markAchieved(Long userId, Long goalId) {
+        Goal goal = findGoal(userId, goalId);
+        goal.achieve();
+        return GoalResponse.from(goalRepository.save(goal));
     }
 
     @Transactional(readOnly = true)
     public GoalEstimateResponse getGoalEstimate(Long userId, Long goalId) {
-        Goal goal = goalRepository.findByIdAndUserId(goalId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("목표를 찾을 수 없습니다."));
-
-        long netSavings = calculateNetSavings(userId);
-        long avgWeeklyNet = calculateAvgWeeklyNet(userId);
+        Goal goal = findGoal(userId, goalId);
+        long netSavings = ledgerQueryService.getTotalNetSavings(userId);
+        long avgWeeklyNet = ledgerQueryService.getAvgWeeklyNet(userId, 4);
         long remaining = Math.max(0, goal.getTargetAmount() - netSavings);
         int progress = (int) Math.min(100, Math.round((double) netSavings / goal.getTargetAmount() * 100));
 
@@ -95,25 +82,20 @@ public class GoalService {
     }
 
     /**
-     * 기능 #10: 지출 추가 시 활성 목표들의 달성 지연 여부를 계산하여 경고 목록을 반환합니다.
+     * 지출 추가 시 활성 목표들의 달성 지연 여부를 계산하여 경고 목록을 반환합니다.
+     * LedgerService가 expense 항목 추가 시 호출합니다.
      */
     public List<GoalWarning> checkGoalDelays(Long userId, Long newExpenseAmount) {
         List<Goal> activeGoals = goalRepository.findByUserIdAndIsAchievedFalse(userId);
         if (activeGoals.isEmpty()) return List.of();
 
-        long netSavings = calculateNetSavings(userId);
-        long avgWeeklyNet = calculateAvgWeeklyNet(userId);
+        long netSavings = ledgerQueryService.getTotalNetSavings(userId);
+        long avgWeeklyNet = ledgerQueryService.getAvgWeeklyNet(userId, 4);
         if (avgWeeklyNet <= 0) return List.of();
 
         List<GoalWarning> warnings = new ArrayList<>();
         for (Goal goal : activeGoals) {
-            long remaining = goal.getTargetAmount() - netSavings;
-            if (remaining <= 0) continue;
-
-            long weeksWithout = (long) Math.ceil((double) remaining / avgWeeklyNet);
-            long weeksWithExpense = (long) Math.ceil((double) (remaining + newExpenseAmount) / avgWeeklyNet);
-            long delay = weeksWithExpense - weeksWithout;
-
+            long delay = goal.calculateDelayWeeks(netSavings, avgWeeklyNet, newExpenseAmount);
             if (delay > 0) {
                 warnings.add(new GoalWarning(
                         goal.getId(), goal.getItemName(), delay,
@@ -124,18 +106,8 @@ public class GoalService {
         return warnings;
     }
 
-    private long calculateNetSavings(Long userId) {
-        Long income = ledgerEntryRepository.sumIncome(userId);
-        Long expense = ledgerEntryRepository.sumExpense(userId);
-        return (income != null ? income : 0L) - (expense != null ? expense : 0L);
-    }
-
-    private long calculateAvgWeeklyNet(Long userId) {
-        LocalDate weekStart = WeekUtil.getWeekStart();
-        LocalDate startDate = weekStart.minusWeeks(4);
-        List<WeeklyNetProjection> weeklyNets = ledgerEntryRepository.findWeeklyNets(userId, startDate, weekStart);
-        if (weeklyNets.isEmpty()) return 0L;
-        long sum = weeklyNets.stream().mapToLong(w -> w.getNetIncome() != null ? w.getNetIncome() : 0L).sum();
-        return sum / weeklyNets.size();
+    private Goal findGoal(Long userId, Long goalId) {
+        return goalRepository.findByIdAndUserId(goalId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("목표를 찾을 수 없습니다."));
     }
 }

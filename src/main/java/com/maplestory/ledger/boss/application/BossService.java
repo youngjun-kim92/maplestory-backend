@@ -2,12 +2,14 @@ package com.maplestory.ledger.boss.application;
 
 import com.maplestory.ledger.auth.domain.User;
 import com.maplestory.ledger.auth.infrastructure.UserRepository;
+import com.maplestory.ledger.boss.application.command.RecordBossKillCommand;
 import com.maplestory.ledger.boss.domain.BossKill;
 import com.maplestory.ledger.boss.domain.BossMaster;
 import com.maplestory.ledger.boss.infrastructure.BossKillRepository;
 import com.maplestory.ledger.boss.infrastructure.BossMasterRepository;
 import com.maplestory.ledger.boss.infrastructure.projection.BossStatsProjection;
-import com.maplestory.ledger.boss.presentation.dto.BossKillRequest;
+import com.maplestory.ledger.boss.presentation.dto.BossKillResponse;
+import com.maplestory.ledger.boss.presentation.dto.BossMasterResponse;
 import com.maplestory.ledger.character.domain.MapleCharacter;
 import com.maplestory.ledger.character.infrastructure.CharacterRepository;
 import com.maplestory.ledger.common.exception.ResourceNotFoundException;
@@ -32,59 +34,59 @@ public class BossService {
     private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
-    public List<BossMaster> getBossList() {
-        return bossMasterRepository.findAllByOrderByBossNameAscDifficultyAsc();
+    public List<BossMasterResponse> getBossList() {
+        return bossMasterRepository.findAllByOrderByBossNameAscDifficultyAsc()
+                .stream().map(BossMasterResponse::from).toList();
     }
 
     /**
-     * 기능 #4: 보스 이름+난이도 선택만으로 결정석 가격을 자동 계산하여 가계부에 합산합니다.
+     * 보스 처치를 기록합니다. boss/hunting 도메인은 가계부 항목(LedgerEntry)과 강하게 결합되어
+     * 동일 트랜잭션 내에서 LedgerEntry를 직접 생성합니다.
+     * (도메인 이벤트 방식 대신 실용적 결합을 선택한 의도적 설계 결정)
      */
     @Transactional
-    public BossKill recordBossKill(Long userId, BossKillRequest req) {
-        BossMaster bossMaster = bossMasterRepository.findByBossNameAndDifficulty(req.bossName(), req.difficulty())
+    public BossKillResponse recordBossKill(Long userId, RecordBossKillCommand cmd) {
+        BossMaster bossMaster = bossMasterRepository
+                .findByBossNameAndDifficulty(cmd.bossName(), cmd.difficulty())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "보스 정보를 찾을 수 없습니다: " + req.bossName() + " " + req.difficulty()));
+                        "보스 정보를 찾을 수 없습니다: " + cmd.bossName() + " " + cmd.difficulty()));
 
         User user = userRepository.getReferenceById(userId);
-        MapleCharacter character = null;
-        if (req.characterId() != null) {
-            character = characterRepository.findByIdAndUserId(req.characterId(), userId)
-                    .orElseThrow(() -> new ResourceNotFoundException("캐릭터를 찾을 수 없습니다."));
-        }
+        MapleCharacter character = resolveCharacter(userId, cmd.characterId());
+        LocalDate weekStart = WeekUtil.getWeekStart(cmd.killDate());
 
-        LocalDate weekStart = WeekUtil.getWeekStart(req.killDate());
+        LedgerEntry ledgerEntry = ledgerEntryRepository.save(
+                LedgerEntry.create(user, character,
+                        LedgerEntry.EntryType.income, LedgerEntry.EntryCategory.boss,
+                        bossMaster.getCrystalPrice(),
+                        cmd.bossName() + " " + cmd.difficulty() + " 결정석",
+                        cmd.killDate(), weekStart)
+        );
 
-        LedgerEntry ledgerEntry = new LedgerEntry();
-        ledgerEntry.setUser(user);
-        ledgerEntry.setCharacter(character);
-        ledgerEntry.setType(LedgerEntry.EntryType.income);
-        ledgerEntry.setCategory(LedgerEntry.EntryCategory.boss);
-        ledgerEntry.setAmount(bossMaster.getCrystalPrice());
-        ledgerEntry.setDescription(req.bossName() + " " + req.difficulty() + " 결정석");
-        ledgerEntry.setEntryDate(req.killDate());
-        ledgerEntry.setWeekStart(weekStart);
-        ledgerEntry = ledgerEntryRepository.save(ledgerEntry);
-
-        BossKill kill = new BossKill();
-        kill.setUser(user);
-        kill.setCharacter(character);
-        kill.setLedgerEntry(ledgerEntry);
-        kill.setBossName(req.bossName());
-        kill.setDifficulty(req.difficulty());
-        kill.setCrystalPrice(bossMaster.getCrystalPrice());
-        kill.setKillDate(req.killDate());
-        kill.setWeekStart(weekStart);
-        return bossKillRepository.save(kill);
+        BossKill kill = bossKillRepository.save(
+                BossKill.create(user, character, ledgerEntry,
+                        cmd.bossName(), cmd.difficulty(), bossMaster.getCrystalPrice(),
+                        cmd.killDate(), weekStart)
+        );
+        return BossKillResponse.from(kill);
     }
 
     @Transactional(readOnly = true)
-    public List<BossKill> getWeeklyBossKills(Long userId, LocalDate weekStartParam) {
+    public List<BossKillResponse> getWeeklyBossKills(Long userId, LocalDate weekStartParam) {
         LocalDate weekStart = weekStartParam != null ? weekStartParam : WeekUtil.getWeekStart();
-        return bossKillRepository.findByUserIdAndWeekStartOrderByKillDateDesc(userId, weekStart);
+        return bossKillRepository
+                .findByUserIdAndWeekStartOrderByKillDateDesc(userId, weekStart)
+                .stream().map(BossKillResponse::from).toList();
     }
 
     @Transactional(readOnly = true)
     public List<BossStatsProjection> getBossStats(Long userId) {
         return bossKillRepository.findBossStats(userId);
+    }
+
+    private MapleCharacter resolveCharacter(Long userId, Long characterId) {
+        if (characterId == null) return null;
+        return characterRepository.findByIdAndUserId(characterId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("캐릭터를 찾을 수 없습니다."));
     }
 }

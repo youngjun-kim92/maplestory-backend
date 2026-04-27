@@ -10,12 +10,11 @@
 
 - [핵심 기능](#핵심-기능)
 - [기술 스택](#기술-스택)
-- [프로젝트 구조](#프로젝트-구조)
+- [아키텍처](#아키텍처)
 - [데이터베이스 구조](#데이터베이스-구조)
 - [시작하기](#시작하기)
 - [API 사용 방법](#api-사용-방법)
 - [인증 방식](#인증-방식)
-- [주요 기능 상세](#주요-기능-상세)
 - [에러 응답 형식](#에러-응답-형식)
 
 ---
@@ -51,35 +50,68 @@
 
 ---
 
-## 프로젝트 구조
+## 아키텍처
 
-**DDD(Domain-Driven Design)** 기반의 도메인 중심 패키지 구조를 사용합니다. 자세한 내용은 [DDD 아키텍처 가이드](docs/DDD_ARCHITECTURE.md)를 참고하세요.
+### DDD 패키지 구조
+
+**DDD(Domain-Driven Design)** 기반의 바운디드 컨텍스트별 패키지 구조를 사용합니다.
+각 도메인 패키지는 `domain → infrastructure → application → presentation` 4계층으로 구성됩니다.
 
 ```
 src/main/java/com/maplestory/ledger/
 │
 ├── MapleStoryApplication.java
 │
-├── common/                    ← 공통 관심사 (JWT, Security, 예외처리, 유틸)
+├── common/                         ← 공통 관심사 (JWT, Security, 예외처리, 유틸)
 │   ├── exception/
 │   ├── security/
-│   └── util/
+│   └── util/WeekUtil.java          ← 목요일 기준 주차 계산
 │
-├── auth/                      ← 인증 도메인 (회원가입, 로그인)
-│   ├── domain/
-│   ├── infrastructure/
+├── auth/                           ← 인증 바운디드 컨텍스트
+│   ├── domain/User.java
+│   ├── infrastructure/UserRepository.java
+│   ├── application/AuthService.java
+│   └── presentation/AuthController.java + dto/
+│
+├── ledger/                         ← 가계부 바운디드 컨텍스트 (핵심 SSOT)
+│   ├── domain/LedgerEntry.java
+│   ├── infrastructure/LedgerEntryRepository.java + projection/
 │   ├── application/
-│   └── presentation/
+│   │   ├── LedgerService.java
+│   │   ├── LedgerQueryService.java  ← 타 도메인용 읽기 전용 서비스
+│   │   └── command/AddLedgerEntryCommand.java
+│   └── presentation/LedgerController.java + dto/
 │
-├── ledger/                    ← 가계부 도메인 (핵심 SSOT)
-├── boss/                      ← 보스 도메인 (결정석 자동 계산)
-├── hunting/                   ← 사냥 도메인 (솔 에르다 환산)
-├── character/                 ← 캐릭터 도메인 (손익분기점)
-├── goal/                      ← 목표 도메인 (달성 예측, 과소비 경고)
-└── stats/                     ← 통계 도메인 (익명 비교, 경험치 계산기)
+├── boss/                           ← 보스 바운디드 컨텍스트
+│   ├── domain/BossKill.java, BossMaster.java
+│   ├── infrastructure/BossKillRepository.java, BossMasterRepository.java + projection/
+│   ├── application/
+│   │   ├── BossService.java
+│   │   └── command/RecordBossKillCommand.java
+│   └── presentation/BossController.java + dto/
+│
+├── hunting/                        ← 사냥 바운디드 컨텍스트
+├── character/                      ← 캐릭터 바운디드 컨텍스트
+├── goal/                           ← 목표 바운디드 컨텍스트
+└── stats/                          ← 통계 바운디드 컨텍스트
 ```
 
-각 도메인은 `domain → infrastructure → application → presentation` 4계층으로 구성됩니다.
+### DDD 설계 원칙
+
+| 원칙 | 적용 내용 |
+|---|---|
+| **엔티티 불변성** | 도메인 엔티티에 `@Setter` 없음. 생성은 정적 팩토리(`Entity.create()`), 변경은 도메인 메서드(`achieve()`, `update()`) |
+| **레이어 분리** | Controller → Command/Request DTO → Application Service → Domain → Infrastructure. 엔티티가 Controller 응답으로 직접 노출되지 않음 |
+| **Response DTO** | 모든 Controller는 전용 Response DTO 반환. 엔티티에 `@JsonIgnore` 불필요 |
+| **Command 객체** | Application Service는 Presentation DTO 대신 Command 객체를 파라미터로 받음 |
+| **도메인 행위** | 비즈니스 로직은 Service에만 있지 않고 도메인 엔티티에도 포함 (`Goal.achieve()`, `Goal.calculateDelayWeeks()` 등) |
+| **크로스 도메인 읽기** | `GoalService`는 `LedgerEntryRepository`에 직접 의존하지 않고 `LedgerQueryService`를 통해 집계 데이터를 조회 |
+
+### 의도적 결합 (설계 결정)
+
+`BossService`와 `HuntingService`는 `LedgerEntryRepository`에 직접 의존하여 단일 트랜잭션 내에서 `LedgerEntry`를 함께 생성합니다.
+이는 도메인 이벤트 방식 대신 실용성을 택한 의도적 설계입니다.
+Boss/Hunting 기록은 반드시 가계부 항목과 동시에 생성되는 불가분의 관계이기 때문입니다.
 
 ---
 
@@ -113,7 +145,7 @@ boss_kills
   ├── user_id (FK), character_id (FK, nullable)
   ├── ledger_entry_id (FK)        ← 가계부 자동 등록 연결
   ├── boss_name, difficulty
-  ├── crystal_price               ← 처치 당시 가격 복사 저장
+  ├── crystal_price               ← 처치 당시 가격 스냅샷 (이후 가격 변경과 무관)
   ├── kill_date, week_start
 
 hunting_sessions
@@ -130,7 +162,7 @@ goals
   ├── item_name, target_amount
   ├── is_achieved, achieved_at
 
-boss_master                       ← 보스 결정석 가격 마스터 (44개 초기 데이터)
+boss_master                       ← 보스 결정석 가격 마스터 (43개 초기 데이터)
   ├── id (PK)
   ├── boss_name + difficulty (UNIQUE)
   ├── crystal_price
@@ -150,7 +182,7 @@ boss_master                       ← 보스 결정석 가격 마스터 (44개 �
 ### 1. 데이터베이스 생성
 
 ```sql
-CREATE DATABASE maplestory_ledger
+CREATE DATABASE maple_planner
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 ```
@@ -162,7 +194,7 @@ CREATE DATABASE maplestory_ledger
 ```yaml
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/maplestory_ledger?characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+    url: jdbc:mysql://localhost:3306/maple_planner?characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
     username: 본인_DB_사용자명
     password: 본인_DB_비밀번호
 
@@ -171,12 +203,9 @@ jwt:
   expiration: 604800000               # 토큰 유효기간 (7일, 밀리초)
 ```
 
-> **보안 주의**: 운영 환경에서는 `jwt.secret`과 DB 비밀번호를 환경 변수로 관리하세요.  
-> `.gitignore`에 `application-local.yml`이 포함되어 있으니 별도 파일로 분리하는 것을 권장합니다.
+> **보안 주의**: 운영 환경에서는 `jwt.secret`과 DB 비밀번호를 환경 변수로 관리하세요.
 
 ### 3. 실행
-
-IntelliJ IDEA에서 `MapleStoryApplication.java`를 직접 실행하거나, Gradle을 사용합니다.
 
 ```bash
 # Gradle로 실행
@@ -189,14 +218,7 @@ java -jar build/libs/maplestory-backend-0.0.1-SNAPSHOT.jar
 
 ### 4. 초기 데이터 확인
 
-애플리케이션 최초 실행 시 `data.sql`이 자동 실행되어 `boss_master` 테이블에 **43개 보스** 결정석 가격이 삽입됩니다.
-
-```
-자쿰(easy/normal), 힐라(normal/hard), 카오스자쿰, 카오스혼테일,
-매그너스(normal/hard), 반반/크림슨퀸/피에르/벨룸(easy/normal/hard),
-루시드/윌/스우/데미안/도원결의/진힐라/칠요/카링(normal/hard),
-림보(normal/hard), 검은마법사(hard) 등
-```
+애플리케이션 최초 실행 시 `data.sql`이 자동 실행되어 `boss_master` 테이블에 43개 보스 결정석 가격이 삽입됩니다.
 
 ---
 
@@ -233,20 +255,12 @@ Authorization: Bearer {발급받은_토큰}
 
 ```json
 // Request
-{
-  "nickname": "메이플유저",   // 2~20자
-  "password": "pass1234"     // 최소 6자
-}
+{ "nickname": "메이플유저", "password": "pass1234" }
 
 // Response 201
 {
   "token": "eyJhbGci...",
-  "user": {
-    "id": 1,
-    "nickname": "메이플유저",
-    "solErdaFragmentPrice": 0,
-    "createdAt": "2026-04-27T10:00:00"
-  }
+  "user": { "id": 1, "nickname": "메이플유저", "solErdaFragmentPrice": 0, "createdAt": "..." }
 }
 ```
 
@@ -255,23 +269,12 @@ Authorization: Bearer {발급받은_토큰}
 ```json
 // Request
 { "nickname": "메이플유저", "password": "pass1234" }
-
 // Response 200 — register와 동일 구조
 ```
 
-#### GET /api/auth/profile — 내 프로필 조회 🔒
+#### GET /api/auth/profile 🔒 — 내 프로필 조회
 
-```json
-// Response 200
-{
-  "id": 1,
-  "nickname": "메이플유저",
-  "solErdaFragmentPrice": 150000,
-  "createdAt": "2026-04-27T10:00:00"
-}
-```
-
-#### PUT /api/auth/sol-erda-price?price=150000 — 솔 에르다 단가 설정 🔒
+#### PUT /api/auth/sol-erda-price?price=150000 🔒 — 솔 에르다 단가 설정
 
 ```
 Response 204 No Content
@@ -281,7 +284,7 @@ Response 204 No Content
 
 ### 가계부 API
 
-#### GET /api/ledger — 주간 가계부 조회 🔒
+#### GET /api/ledger 🔒 — 주간 가계부 조회
 
 ```
 Query: ?week=2026-04-24  (목요일 날짜, 생략 시 현재 주)
@@ -293,290 +296,192 @@ Query: ?week=2026-04-24  (목요일 날짜, 생략 시 현재 주)
   "weekStart": "2026-04-24",
   "entries": [
     {
-      "id": 5,
-      "type": "income",
-      "category": "boss",
-      "amount": 39600000,
-      "description": "루시드 hard 결정석",
-      "entryDate": "2026-04-27",
-      "weekStart": "2026-04-24"
+      "id": 5, "type": "income", "category": "boss", "amount": 39600000,
+      "description": "루시드 hard 결정석", "entryDate": "2026-04-27",
+      "weekStart": "2026-04-24", "characterId": 1, "characterName": "야릇한비틀기",
+      "createdAt": "..."
     }
   ],
-  "summary": {
-    "totalIncome": 39600000,
-    "totalExpense": 0,
-    "netProfit": 39600000
-  }
+  "summary": { "totalIncome": 39600000, "totalExpense": 0, "netProfit": 39600000 }
 }
 ```
 
-#### POST /api/ledger — 가계부 항목 추가 🔒
+#### POST /api/ledger 🔒 — 가계부 항목 추가
 
 ```json
 // Request
-{
-  "type": "expense",
-  "category": "cube",
-  "amount": 100000000,
-  "description": "레드 큐브 10개",
-  "entryDate": "2026-04-27",
-  "characterId": 1    // nullable
-}
+{ "type": "expense", "category": "cube", "amount": 100000000,
+  "description": "레드 큐브 10개", "entryDate": "2026-04-27", "characterId": 1 }
 
 // Response 201
 {
-  "entry": { /* 저장된 항목 */ },
-  "goalWarnings": [   // 지출로 인해 목표 달성이 지연될 경우 경고 (기능 #10)
+  "entry": { /* LedgerEntryResponse */ },
+  "goalWarnings": [
     {
-      "goalId": 1,
-      "itemName": "아케인셰이드 완드",
-      "delayWeeks": 2,
+      "goalId": 1, "itemName": "아케인셰이드 완드", "delayWeeks": 2,
       "message": "이번 지출로 인해 '아케인셰이드 완드' 목표 달성이 약 2주 지연되었습니다."
     }
   ]
 }
 ```
 
-#### DELETE /api/ledger/{id} — 항목 삭제 🔒
+#### DELETE /api/ledger/{id} 🔒 — 항목 삭제 → `204 No Content`
 
-```
-Response 204 No Content
-```
-
-#### GET /api/ledger/weeks — 기록된 주차 목록 🔒
+#### GET /api/ledger/weeks 🔒 — 기록된 주차 목록
 
 ```json
-// Response 200
-[
-  {
-    "weekStart": "2026-04-24",
-    "totalIncome": 150000000,
-    "totalExpense": 50000000,
-    "entryCount": 12
-  }
-]
+[{ "weekStart": "2026-04-24", "totalIncome": 150000000, "totalExpense": 50000000, "entryCount": 12 }]
 ```
 
-#### GET /api/ledger/stats?weeks=4 — 카테고리별 통계 🔒
+#### GET /api/ledger/stats?weeks=4 🔒 — 카테고리별 통계
 
-```
-Query: ?weeks=4  (최근 N주, 기본값 4)
-Response 200 — [카테고리, 타입, 합계, 건수, 평균] 배열
+```json
+[{ "category": "boss", "type": "income", "total": 158400000, "count": 4, "average": 39600000 }]
 ```
 
 ---
 
 ### 보스 API
 
-#### GET /api/boss/list — 보스 목록 조회 (인증 불필요)
+#### GET /api/boss/list — 보스 목록 (인증 불필요)
 
 ```json
-// Response 200
-[
-  { "id": 1,  "bossName": "자쿰",  "difficulty": "easy", "crystalPrice": 1440000,  "maxAttemptsPerWeek": 1 },
-  { "id": 29, "bossName": "루시드", "difficulty": "hard", "crystalPrice": 39600000, "maxAttemptsPerWeek": 1 }
-]
+[{ "id": 1, "bossName": "루시드", "difficulty": "hard", "crystalPrice": 39600000, "maxAttemptsPerWeek": 1 }]
 ```
 
-#### POST /api/boss/kill — 보스 처치 기록 🔒
-
-보스 이름 + 난이도만 선택하면 결정석 가격이 **자동 계산**되어 가계부에 합산됩니다.
+#### POST /api/boss/kill 🔒 — 보스 처치 기록
 
 ```json
 // Request
-{
-  "bossName": "루시드",
-  "difficulty": "hard",
-  "killDate": "2026-04-27",
-  "characterId": 1    // nullable
-}
+{ "bossName": "루시드", "difficulty": "hard", "killDate": "2026-04-27", "characterId": 1 }
 
 // Response 201
 {
-  "id": 10,
-  "bossName": "루시드",
-  "difficulty": "hard",
-  "crystalPrice": 39600000,
-  "killDate": "2026-04-27",
-  "weekStart": "2026-04-24"
+  "id": 10, "bossName": "루시드", "difficulty": "hard", "crystalPrice": 39600000,
+  "killDate": "2026-04-27", "weekStart": "2026-04-24",
+  "characterId": 1, "characterName": "야릇한비틀기", "createdAt": "..."
 }
 ```
 
-#### GET /api/boss/weekly?week=2026-04-24 — 주간 보스 처치 목록 🔒
+#### GET /api/boss/weekly?week=2026-04-24 🔒 — 주간 보스 처치 목록
 
-#### GET /api/boss/stats — 보스별 수익 통계 🔒
+#### GET /api/boss/stats 🔒 — 보스별 수익 통계
 
 ```json
-// Response 200
-[
-  {
-    "bossName": "루시드",
-    "difficulty": "hard",
-    "killCount": 4,
-    "totalCrystalIncome": 158400000,
-    "avgCrystalPrice": 39600000.0
-  }
-]
+[{ "bossName": "루시드", "difficulty": "hard", "killCount": 4, "totalCrystalIncome": 158400000, "avgCrystalPrice": 39600000.0 }]
 ```
 
 ---
 
 ### 사냥 API
 
-#### POST /api/hunting/session — 사냥 세션 기록 🔒
-
-솔 에르다 조각이 입력되면 **자동으로 메소 환산**되어 가계부에 합산됩니다.
+#### POST /api/hunting/session 🔒 — 사냥 세션 기록
 
 ```json
 // Request
-{
-  "mapName": "아르카나 강변",
-  "durationMinutes": 60,
-  "income": 80000000,
-  "solErdaFragments": 30,    // nullable, 설정 단가 × 30개 자동 환산
-  "sessionDate": "2026-04-27",
-  "characterId": 1           // nullable
-}
-// solErdaMesoValue = 30 × 150,000(사용자 설정) = 4,500,000
-// 가계부 등록 총액 = 80,000,000 + 4,500,000 = 84,500,000
+{ "mapName": "아르카나 강변", "durationMinutes": 60, "income": 80000000,
+  "solErdaFragments": 30, "sessionDate": "2026-04-27", "characterId": 1 }
 
-// Response 201 — 저장된 HuntingSession 반환
+// Response 201
+{
+  "id": 3, "mapName": "아르카나 강변", "durationMinutes": 60,
+  "income": 80000000, "solErdaFragments": 30, "solErdaMesoValue": 4500000,
+  "totalIncome": 84500000,
+  "sessionDate": "2026-04-27", "weekStart": "2026-04-24",
+  "characterId": 1, "characterName": "야릇한비틀기", "createdAt": "..."
+}
 ```
 
-#### GET /api/hunting/sessions?week=2026-04-24 — 주간 사냥 세션 목록 🔒
+#### GET /api/hunting/sessions?week=2026-04-24 🔒 — 주간 사냥 세션 목록
 
-#### GET /api/hunting/stats — 사냥터별 수익 효율 통계 🔒
+#### GET /api/hunting/stats 🔒 — 사냥터별 수익 효율 통계
 
 ```json
-// Response 200 — 시간당 수익 내림차순 정렬
-[
-  {
-    "mapName": "아르카나 강변",
-    "sessionCount": 5,
-    "totalIncome": 425000000,
-    "totalMinutes": 300,
-    "avgIncomePerHour": 85000000
-  }
-]
+[{ "mapName": "아르카나 강변", "sessionCount": 5, "totalIncome": 425000000,
+   "totalMinutes": 300, "avgIncomePerHour": 85000000 }]
 ```
 
 ---
 
 ### 캐릭터 API
 
-#### POST /api/characters — 캐릭터 등록 🔒
+#### POST /api/characters 🔒 — 캐릭터 등록
 
 ```json
-// Request
+{ "name": "야릇한비틀기", "jobClass": "아크메이지(불,독)", "level": 260, "isMain": true, "initialInvestment": 0 }
+```
+
+#### GET /api/characters 🔒 — 내 캐릭터 목록 (메인 캐릭터 상단 정렬)
+
+```json
+[{ "id": 1, "name": "야릇한비틀기", "jobClass": "아크메이지(불,독)", "level": 260, "isMain": true, "initialInvestment": 0, "createdAt": "..." }]
+```
+
+#### PUT /api/characters/{id} 🔒 — 캐릭터 수정
+
+#### DELETE /api/characters/{id} 🔒 — 캐릭터 삭제
+
+#### GET /api/characters/{id}/roi 🔒 — 부캐릭터 손익분기점 조회
+
+```json
 {
-  "name": "야릇한비틀기",
-  "jobClass": "아크메이지(불,독)",
-  "level": 260,
-  "isMain": true,
-  "initialInvestment": 0    // 부캐릭터 초기 투자 비용 (메소), 손익분기점 계산에 사용
+  "characterId": 2, "characterName": "부캐릭터명",
+  "initialInvestment": 5000000000, "cumulativeBossIncome": 318000000,
+  "weeklyAvgBossIncome": 106000000, "weeksToBreakEven": 48,
+  "isBreakEvenReached": false, "remainingToBreakEven": 4682000000
 }
 ```
 
-#### GET /api/characters — 내 캐릭터 목록 🔒
-
-메인 캐릭터가 상단에 표시됩니다 (`isMain=true` 우선 정렬).
-
-#### PUT /api/characters/{id} — 캐릭터 수정 🔒
-
-#### DELETE /api/characters/{id} — 캐릭터 삭제 🔒
-
-#### GET /api/characters/{id}/roi — 부캐릭터 손익분기점 조회 🔒
-
-```json
-// Response 200
-{
-  "characterId": 2,
-  "characterName": "부캐릭터명",
-  "initialInvestment": 5000000000,
-  "cumulativeBossIncome": 318000000,
-  "weeklyAvgBossIncome": 106000000,
-  "weeksToBreakEven": 48,
-  "isBreakEvenReached": false,
-  "remainingToBreakEven": 4682000000
-}
-```
-
-> **계산 공식**: `weeksToBreakEven = ceil(initialInvestment / weeklyAvgBossIncome)`
+> 계산 공식: `weeksToBreakEven = ceil(initialInvestment / weeklyAvgBossIncome)`
 
 ---
 
 ### 목표 API
 
-#### POST /api/goals — 목표 아이템 등록 🔒
+#### POST /api/goals 🔒 — 목표 아이템 등록
 
 ```json
 { "itemName": "아케인셰이드 완드", "targetAmount": 30000000000 }
+// Response 201: GoalResponse (id, itemName, targetAmount, isAchieved, createdAt, achievedAt)
 ```
 
-#### GET /api/goals — 목표 목록 🔒
+#### GET /api/goals 🔒 / PUT /api/goals/{id} 🔒 / DELETE /api/goals/{id} 🔒
 
-#### PUT /api/goals/{id} — 목표 수정 🔒
+#### PATCH /api/goals/{id}/achieve 🔒 — 목표 달성 처리
 
-#### DELETE /api/goals/{id} — 목표 삭제 🔒
-
-#### PATCH /api/goals/{id}/achieve — 목표 달성 처리 🔒
-
-#### GET /api/goals/{id}/estimate — 목표 달성 예측 🔒
+#### GET /api/goals/{id}/estimate 🔒 — 목표 달성 예측
 
 ```json
-// Response 200
 {
-  "goalId": 1,
-  "itemName": "아케인셰이드 완드",
-  "targetAmount": 30000000000,
-  "currentSavings": 5000000000,
-  "remaining": 25000000000,
-  "progressPercent": 16,
-  "avgWeeklyNet": 500000000,
-  "weeksRemaining": 50,
-  "estimatedDate": "2027-04-22"
+  "goalId": 1, "itemName": "아케인셰이드 완드", "targetAmount": 30000000000,
+  "currentSavings": 5000000000, "remaining": 25000000000, "progressPercent": 16,
+  "avgWeeklyNet": 500000000, "weeksRemaining": 50, "estimatedDate": "2027-04-22"
 }
 ```
 
-> **계산 기준**: 최근 4주간 평균 주당 순수익(수입 - 지출)
+> 계산 기준: 최근 4주간 평균 주당 순수익 (`LedgerQueryService.getAvgWeeklyNet(userId, 4)`)
 
 ---
 
 ### 통계 API
 
-#### GET /api/stats/comparison — 익명 유저 수익 비교 🔒
+#### GET /api/stats/comparison 🔒 — 익명 유저 수익 비교
 
 ```json
-// Response 200
 {
-  "userAvgWeeklyIncome": 800000000,
-  "globalAvgWeeklyIncome": 400000000,
-  "totalUsers": 150,
-  "percentile": 85,
+  "userAvgWeeklyIncome": 800000000, "globalAvgWeeklyIncome": 400000000,
+  "totalUsers": 150, "percentile": 85,
   "message": "내 수익은 전체 유저 상위 15%입니다."
 }
 ```
-
-> 최근 4주 데이터 기준, 익명화된 전체 유저 평균과 비교
 
 #### POST /api/stats/exp-calculator — 경험치 계산기 (인증 불필요)
 
 ```json
 // Request
-{
-  "currentLevel": 260,
-  "currentExpPercent": 45.5,
-  "avgExpPerHour": 12.0,
-  "targetLevel": 265         // nullable, 기본값: currentLevel + 1
-}
-
+{ "currentLevel": 260, "currentExpPercent": 45.5, "avgExpPerHour": 12.0, "targetLevel": 265 }
 // Response 200
-{
-  "currentLevel": 260,
-  "targetLevel": 265,
-  "hoursToTarget": 44.5,
-  "daysToTarget": 1.9
-}
+{ "currentLevel": 260, "targetLevel": 265, "hoursToTarget": 44.5, "daysToTarget": 1.9 }
 ```
 
 ---
@@ -594,12 +499,12 @@ Response 200 — [카테고리, 타입, 합계, 건수, 평균] 배열
 
 ### 주간 계산 알고리즘
 
-메이플스토리는 **매주 목요일 00:00 KST**에 주간 미션이 초기화됩니다. 따라서 한 주는 **목요일 ~ 다음 수요일**로 정의됩니다.
+메이플스토리는 **매주 목요일 00:00 KST**에 주간 미션이 초기화됩니다. 한 주는 **목요일 ~ 다음 수요일**로 정의됩니다.
 
 ```
 목요일(4): (4-4+7)%7 = 0  → 당일이 주 시작
-금요일(5): (5-4+7)%7 = 1  → 전날(목) 이 주 시작
-수요일(3): (3-4+7)%7 = 6  → 6일 전(목) 이 주 시작
+금요일(5): (5-4+7)%7 = 1  → 전날(목)이 주 시작
+수요일(3): (3-4+7)%7 = 6  → 6일 전(목)이 주 시작
 ```
 
 모든 `LedgerEntry`, `BossKill`, `HuntingSession`에는 `week_start` 컬럼이 있어 이 값으로 주간 데이터를 그룹핑합니다.
@@ -608,27 +513,15 @@ Response 200 — [카테고리, 타입, 합계, 건수, 평균] 배열
 
 ## 에러 응답 형식
 
-모든 에러는 다음 형식으로 반환됩니다.
-
 ```json
 { "message": "에러 메시지" }
 ```
 
 | HTTP 코드 | 상황 |
 |---|---|
-| 400 | 입력값 검증 실패 (Validation Error) |
+| 400 | 입력값 검증 실패 |
 | 401 | 인증 실패 (잘못된 닉네임/비밀번호, 토큰 없음/만료) |
 | 403 | 권한 없음 |
-| 404 | 리소스를 찾을 수 없음 |
+| 404 | 리소스를 찾을 수 없습니다 |
 | 409 | 중복 (닉네임 중복 등) |
 | 500 | 서버 내부 오류 |
-
----
-
-## 문서
-
-| 문서 | 설명 |
-|---|---|
-| [API 명세서](docs/API.md) | 전체 API 엔드포인트 상세 명세 |
-| [DDD 아키텍처 가이드](docs/DDD_ARCHITECTURE.md) | 도메인 주도 설계 구조 및 확장 가이드 |
-| [프로젝트 개요](docs/PROJECT_OVERVIEW.md) | 기능 설명, ERD, 설치 방법 |

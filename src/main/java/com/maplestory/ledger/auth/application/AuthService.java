@@ -28,11 +28,8 @@ public class AuthService {
         if (userRepository.existsByNickname(req.nickname())) {
             throw new DuplicateNicknameException("이미 사용 중인 닉네임입니다.");
         }
-        User user = new User();
-        user.setNickname(req.nickname());
-        user.setPasswordHash(passwordEncoder.encode(req.password()));
+        User user = User.create(req.nickname(), passwordEncoder.encode(req.password()));
         user = userRepository.save(user);
-
         String token = jwtTokenProvider.generateToken(user.getId(), user.getNickname());
         return new AuthResponse(token, UserResponse.from(user));
     }
@@ -41,11 +38,9 @@ public class AuthService {
     public AuthResponse login(LoginRequest req) {
         User user = userRepository.findByNickname(req.nickname())
                 .orElseThrow(() -> new InvalidCredentialsException("닉네임 또는 비밀번호가 올바르지 않습니다."));
-
         if (!passwordEncoder.matches(req.password(), user.getPasswordHash())) {
             throw new InvalidCredentialsException("닉네임 또는 비밀번호가 올바르지 않습니다.");
         }
-
         String token = jwtTokenProvider.generateToken(user.getId(), user.getNickname());
         return new AuthResponse(token, UserResponse.from(user));
     }
@@ -61,7 +56,6 @@ public class AuthService {
     public void updateSolErdaPrice(Long userId, Long price) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
-        user.setSolErdaFragmentPrice(price);
-        userRepository.save(user);
+        user.updateSolErdaPrice(price);
     }
 }

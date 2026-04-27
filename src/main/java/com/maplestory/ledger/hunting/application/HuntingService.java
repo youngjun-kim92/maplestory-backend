@@ -9,6 +9,7 @@ import com.maplestory.ledger.common.util.WeekUtil;
 import com.maplestory.ledger.hunting.domain.HuntingSession;
 import com.maplestory.ledger.hunting.infrastructure.HuntingSessionRepository;
 import com.maplestory.ledger.hunting.presentation.dto.HuntingSessionRequest;
+import com.maplestory.ledger.hunting.presentation.dto.HuntingSessionResponse;
 import com.maplestory.ledger.hunting.presentation.dto.HuntingStatsResponse;
 import com.maplestory.ledger.ledger.domain.LedgerEntry;
 import com.maplestory.ledger.ledger.infrastructure.LedgerEntryRepository;
@@ -30,59 +31,45 @@ public class HuntingService {
     private final UserRepository userRepository;
 
     /**
-     * 기능 #5: 사냥 세션 기록. 솔 에르다 조각 자동 환산 포함.
-     * 솔 에르다 조각 수 × 사용자 설정 단가 = 자동 합산 수익
+     * 사냥 세션을 기록합니다. boss/hunting 도메인은 LedgerEntry와 강하게 결합되어
+     * 동일 트랜잭션 내에서 LedgerEntry를 직접 생성합니다.
+     * (도메인 이벤트 방식 대신 실용적 결합을 선택한 의도적 설계 결정)
      */
     @Transactional
-    public HuntingSession recordSession(Long userId, HuntingSessionRequest req) {
+    public HuntingSessionResponse recordSession(Long userId, HuntingSessionRequest req) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
-        MapleCharacter character = null;
-        if (req.characterId() != null) {
-            character = characterRepository.findByIdAndUserId(req.characterId(), userId)
-                    .orElseThrow(() -> new ResourceNotFoundException("캐릭터를 찾을 수 없습니다."));
-        }
+        MapleCharacter character = resolveCharacter(userId, req.characterId());
 
         int fragments = req.solErdaFragments() != null ? req.solErdaFragments() : 0;
         long solErdaMesoValue = fragments * user.getSolErdaFragmentPrice();
         long totalIncome = req.income() + solErdaMesoValue;
-
         LocalDate weekStart = WeekUtil.getWeekStart(req.sessionDate());
 
-        LedgerEntry ledgerEntry = new LedgerEntry();
-        ledgerEntry.setUser(user);
-        ledgerEntry.setCharacter(character);
-        ledgerEntry.setType(LedgerEntry.EntryType.income);
-        ledgerEntry.setCategory(LedgerEntry.EntryCategory.hunting);
-        ledgerEntry.setAmount(totalIncome);
-        ledgerEntry.setDescription(req.mapName() + " " + req.durationMinutes() + "분 사냥");
-        ledgerEntry.setEntryDate(req.sessionDate());
-        ledgerEntry.setWeekStart(weekStart);
-        ledgerEntry = ledgerEntryRepository.save(ledgerEntry);
+        LedgerEntry ledgerEntry = ledgerEntryRepository.save(
+                LedgerEntry.create(user, character,
+                        LedgerEntry.EntryType.income, LedgerEntry.EntryCategory.hunting,
+                        totalIncome,
+                        req.mapName() + " " + req.durationMinutes() + "분 사냥",
+                        req.sessionDate(), weekStart)
+        );
 
-        HuntingSession session = new HuntingSession();
-        session.setUser(user);
-        session.setCharacter(character);
-        session.setLedgerEntry(ledgerEntry);
-        session.setMapName(req.mapName());
-        session.setDurationMinutes(req.durationMinutes());
-        session.setIncome(req.income());
-        session.setSolErdaFragments(fragments);
-        session.setSolErdaMesoValue(solErdaMesoValue);
-        session.setSessionDate(req.sessionDate());
-        session.setWeekStart(weekStart);
-        return huntingSessionRepository.save(session);
+        HuntingSession session = huntingSessionRepository.save(
+                HuntingSession.create(user, character, ledgerEntry,
+                        req.mapName(), req.durationMinutes(), req.income(),
+                        fragments, solErdaMesoValue, req.sessionDate(), weekStart)
+        );
+        return HuntingSessionResponse.from(session);
     }
 
     @Transactional(readOnly = true)
-    public List<HuntingSession> getWeeklySessions(Long userId, LocalDate weekStartParam) {
+    public List<HuntingSessionResponse> getWeeklySessions(Long userId, LocalDate weekStartParam) {
         LocalDate weekStart = weekStartParam != null ? weekStartParam : WeekUtil.getWeekStart();
-        return huntingSessionRepository.findByUserIdAndWeekStartOrderBySessionDateDesc(userId, weekStart);
+        return huntingSessionRepository
+                .findByUserIdAndWeekStartOrderBySessionDateDesc(userId, weekStart)
+                .stream().map(HuntingSessionResponse::from).toList();
     }
 
-    /**
-     * 기능 #3: 사냥터별 시간당 수익 효율 통계
-     */
     @Transactional(readOnly = true)
     public List<HuntingStatsResponse> getHuntingStats(Long userId) {
         List<Object[]> raw = huntingSessionRepository.findHuntingStatsByMap(userId);
@@ -97,5 +84,11 @@ public class HuntingService {
             ));
         }
         return result;
+    }
+
+    private MapleCharacter resolveCharacter(Long userId, Long characterId) {
+        if (characterId == null) return null;
+        return characterRepository.findByIdAndUserId(characterId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("캐릭터를 찾을 수 없습니다."));
     }
 }

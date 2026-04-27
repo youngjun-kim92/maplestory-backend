@@ -2,8 +2,8 @@ package com.maplestory.ledger.hunting.presentation;
 
 import com.maplestory.ledger.common.security.CustomUserDetails;
 import com.maplestory.ledger.hunting.application.HuntingService;
-import com.maplestory.ledger.hunting.domain.HuntingSession;
 import com.maplestory.ledger.hunting.presentation.dto.HuntingSessionRequest;
+import com.maplestory.ledger.hunting.presentation.dto.HuntingSessionResponse;
 import com.maplestory.ledger.hunting.presentation.dto.HuntingStatsResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,9 +23,8 @@ public class HuntingController {
 
     private final HuntingService huntingService;
 
-    /** 기능 #5: 사냥 세션 기록 (솔 에르다 조각 자동 환산 포함) */
     @PostMapping("/session")
-    public ResponseEntity<HuntingSession> recordSession(
+    public ResponseEntity<HuntingSessionResponse> recordSession(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody HuntingSessionRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -33,13 +32,12 @@ public class HuntingController {
     }
 
     @GetMapping("/sessions")
-    public ResponseEntity<List<HuntingSession>> getWeeklySessions(
+    public ResponseEntity<List<HuntingSessionResponse>> getWeeklySessions(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate week) {
         return ResponseEntity.ok(huntingService.getWeeklySessions(userDetails.getUserId(), week));
     }
 
-    /** 기능 #3: 사냥터별 시간당 수익 효율 통계 */
     @GetMapping("/stats")
     public ResponseEntity<List<HuntingStatsResponse>> getHuntingStats(
             @AuthenticationPrincipal CustomUserDetails userDetails) {

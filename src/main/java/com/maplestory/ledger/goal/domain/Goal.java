@@ -1,32 +1,23 @@
 package com.maplestory.ledger.goal.domain;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.maplestory.ledger.auth.domain.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
-/**
- * 목표 아이템 엔티티 — DB의 goals 테이블과 매핑됩니다.
- *
- * 기능 #6(목표 아이템 달성 예측)과 기능 #10(과소비 경고)의 핵심 데이터입니다.
- *
- * 지출 추가 시 이 목표들의 달성 지연 여부를 자동으로 검사하여 경고를 발생시킵니다.
- */
 @Entity
 @Table(name = "goals")
-@Getter @Setter @NoArgsConstructor
+@Getter
+@NoArgsConstructor
 public class Goal {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -37,11 +28,6 @@ public class Goal {
     @Column(name = "target_amount", nullable = false)
     private Long targetAmount;
 
-    /**
-     * 달성 여부.
-     * false: 진행 중 (과소비 경고 대상)
-     * true: 달성 완료 (경고 대상에서 제외)
-     */
     @Column(name = "is_achieved")
     private Boolean isAchieved = false;
 
@@ -51,4 +37,33 @@ public class Goal {
 
     @Column(name = "achieved_at")
     private LocalDateTime achievedAt;
+
+    public static Goal create(User user, String itemName, Long targetAmount) {
+        Goal goal = new Goal();
+        goal.user = user;
+        goal.itemName = itemName;
+        goal.targetAmount = targetAmount;
+        goal.isAchieved = false;
+        return goal;
+    }
+
+    public void update(String itemName, Long targetAmount) {
+        this.itemName = itemName;
+        this.targetAmount = targetAmount;
+    }
+
+    public void achieve() {
+        this.isAchieved = true;
+        this.achievedAt = LocalDateTime.now();
+    }
+
+    /** 이 지출이 발생했을 때 목표 달성이 몇 주 지연되는지 계산합니다. */
+    public long calculateDelayWeeks(long currentNetSavings, long avgWeeklyNet, long newExpense) {
+        if (avgWeeklyNet <= 0) return 0;
+        long remaining = targetAmount - currentNetSavings;
+        if (remaining <= 0) return 0;
+        long weeksWithout = (long) Math.ceil((double) remaining / avgWeeklyNet);
+        long weeksWithExpense = (long) Math.ceil((double) (remaining + newExpense) / avgWeeklyNet);
+        return weeksWithExpense - weeksWithout;
+    }
 }

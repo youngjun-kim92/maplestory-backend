@@ -1,10 +1,11 @@
 package com.maplestory.ledger.boss.presentation;
 
 import com.maplestory.ledger.boss.application.BossService;
-import com.maplestory.ledger.boss.domain.BossKill;
-import com.maplestory.ledger.boss.domain.BossMaster;
+import com.maplestory.ledger.boss.application.command.RecordBossKillCommand;
 import com.maplestory.ledger.boss.infrastructure.projection.BossStatsProjection;
 import com.maplestory.ledger.boss.presentation.dto.BossKillRequest;
+import com.maplestory.ledger.boss.presentation.dto.BossKillResponse;
+import com.maplestory.ledger.boss.presentation.dto.BossMasterResponse;
 import com.maplestory.ledger.common.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,29 +25,26 @@ public class BossController {
 
     private final BossService bossService;
 
-    /** 기능 #4: 보스 목록 조회 (결정석 가격 포함) */
     @GetMapping("/list")
-    public ResponseEntity<List<BossMaster>> getBossList() {
+    public ResponseEntity<List<BossMasterResponse>> getBossList() {
         return ResponseEntity.ok(bossService.getBossList());
     }
 
-    /** 기능 #4: 보스 처치 기록 → 결정석 가격 자동 계산 후 가계부 합산 */
     @PostMapping("/kill")
-    public ResponseEntity<BossKill> recordBossKill(
+    public ResponseEntity<BossKillResponse> recordBossKill(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody BossKillRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(bossService.recordBossKill(userDetails.getUserId(), req));
+                .body(bossService.recordBossKill(userDetails.getUserId(), RecordBossKillCommand.from(req)));
     }
 
     @GetMapping("/weekly")
-    public ResponseEntity<List<BossKill>> getWeeklyBossKills(
+    public ResponseEntity<List<BossKillResponse>> getWeeklyBossKills(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate week) {
         return ResponseEntity.ok(bossService.getWeeklyBossKills(userDetails.getUserId(), week));
     }
 
-    /** 기능 #3: 보스별 수익 효율 통계 */
     @GetMapping("/stats")
     public ResponseEntity<List<BossStatsProjection>> getBossStats(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
