@@ -1,4 +1,4 @@
-# 메이플스토리 종합 가계부 백엔드 (MapleStory Ledger Backend)
+# MaplePlanner — 메이플스토리 종합 가계부 백엔드
 
 ## 프로젝트 소개
 
