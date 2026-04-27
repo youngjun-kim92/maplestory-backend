@@ -83,6 +83,7 @@ public class LedgerEntry {
     public enum EntryCategory {
         boss,
         hunting,
+        auction,
         sol_erda,
         cube,
         starforce,
