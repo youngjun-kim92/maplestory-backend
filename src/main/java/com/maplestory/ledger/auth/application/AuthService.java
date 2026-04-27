@@ -1,0 +1,67 @@
+package com.maplestory.ledger.auth.application;
+
+import com.maplestory.ledger.auth.domain.User;
+import com.maplestory.ledger.auth.infrastructure.UserRepository;
+import com.maplestory.ledger.auth.presentation.dto.AuthResponse;
+import com.maplestory.ledger.auth.presentation.dto.LoginRequest;
+import com.maplestory.ledger.auth.presentation.dto.RegisterRequest;
+import com.maplestory.ledger.auth.presentation.dto.UserResponse;
+import com.maplestory.ledger.common.exception.DuplicateNicknameException;
+import com.maplestory.ledger.common.exception.InvalidCredentialsException;
+import com.maplestory.ledger.common.exception.ResourceNotFoundException;
+import com.maplestory.ledger.common.security.JwtTokenProvider;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+public class AuthService {
+
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtTokenProvider jwtTokenProvider;
+
+    @Transactional
+    public AuthResponse register(RegisterRequest req) {
+        if (userRepository.existsByNickname(req.nickname())) {
+            throw new DuplicateNicknameException("이미 사용 중인 닉네임입니다.");
+        }
+        User user = new User();
+        user.setNickname(req.nickname());
+        user.setPasswordHash(passwordEncoder.encode(req.password()));
+        user = userRepository.save(user);
+
+        String token = jwtTokenProvider.generateToken(user.getId(), user.getNickname());
+        return new AuthResponse(token, UserResponse.from(user));
+    }
+
+    @Transactional(readOnly = true)
+    public AuthResponse login(LoginRequest req) {
+        User user = userRepository.findByNickname(req.nickname())
+                .orElseThrow(() -> new InvalidCredentialsException("닉네임 또는 비밀번호가 올바르지 않습니다."));
+
+        if (!passwordEncoder.matches(req.password(), user.getPasswordHash())) {
+            throw new InvalidCredentialsException("닉네임 또는 비밀번호가 올바르지 않습니다.");
+        }
+
+        String token = jwtTokenProvider.generateToken(user.getId(), user.getNickname());
+        return new AuthResponse(token, UserResponse.from(user));
+    }
+
+    @Transactional(readOnly = true)
+    public UserResponse getProfile(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
+        return UserResponse.from(user);
+    }
+
+    @Transactional
+    public void updateSolErdaPrice(Long userId, Long price) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
+        user.setSolErdaFragmentPrice(price);
+        userRepository.save(user);
+    }
+}
