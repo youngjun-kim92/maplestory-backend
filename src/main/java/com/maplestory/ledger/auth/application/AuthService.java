@@ -58,4 +58,12 @@ public class AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
         user.updateSolErdaPrice(price);
     }
+
+    @Transactional
+    public UserResponse updateMesoBalance(Long userId, Long inventoryMeso, Long storageMeso) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
+        user.updateMesoBalance(inventoryMeso, storageMeso);
+        return UserResponse.from(user);
+    }
 }

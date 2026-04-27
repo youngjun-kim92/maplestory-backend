@@ -27,4 +27,8 @@ public class BossMaster {
 
     @Column(name = "max_attempts_per_week")
     private Integer maxAttemptsPerWeek = 1;
+
+    /** 초기화 주기: daily(매일), weekly(매주 목요일), monthly(매월 1일) */
+    @Column(name = "reset_type", nullable = false, length = 10)
+    private String resetType = "weekly";
 }

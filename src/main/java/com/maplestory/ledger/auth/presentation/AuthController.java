@@ -3,6 +3,7 @@ package com.maplestory.ledger.auth.presentation;
 import com.maplestory.ledger.auth.application.AuthService;
 import com.maplestory.ledger.auth.presentation.dto.AuthResponse;
 import com.maplestory.ledger.auth.presentation.dto.LoginRequest;
+import com.maplestory.ledger.auth.presentation.dto.MesoBalanceRequest;
 import com.maplestory.ledger.auth.presentation.dto.RegisterRequest;
 import com.maplestory.ledger.auth.presentation.dto.UserResponse;
 import com.maplestory.ledger.common.security.CustomUserDetails;
@@ -21,7 +22,6 @@ public class AuthController {
 
     private final AuthService authService;
 
-    /** 기능 #1: 닉네임+비밀번호 간편 회원가입 */
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(req));
@@ -37,12 +37,21 @@ public class AuthController {
         return ResponseEntity.ok(authService.getProfile(userDetails.getUserId()));
     }
 
-    /** 기능 #5: 솔 에르다 조각 낱개 가격 설정 */
     @PutMapping("/sol-erda-price")
     public ResponseEntity<Void> updateSolErdaPrice(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam @Min(0) Long price) {
         authService.updateSolErdaPrice(userDetails.getUserId(), price);
         return ResponseEntity.noContent().build();
+    }
+
+    /** 현재 보유 메소(인벤토리) 및 창고 메소를 기록합니다. */
+    @PutMapping("/meso-balance")
+    public ResponseEntity<UserResponse> updateMesoBalance(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody MesoBalanceRequest req) {
+        return ResponseEntity.ok(
+                authService.updateMesoBalance(userDetails.getUserId(), req.inventoryMeso(), req.storageMeso())
+        );
     }
 }
