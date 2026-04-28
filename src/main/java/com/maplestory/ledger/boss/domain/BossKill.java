@@ -55,13 +55,17 @@ public class BossKill {
     @Column(name = "week_start", nullable = false)
     private LocalDate weekStart;
 
+    /** 파티 인원 수 (1~6). null이면 솔로 처치로 간주. */
+    @Column(name = "party_size")
+    private Integer partySize;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     public static BossKill create(User user, MapleCharacter character, LedgerEntry ledgerEntry,
                                    String bossName, String difficulty, Long crystalPrice,
-                                   LocalDate killDate, LocalDate weekStart) {
+                                   LocalDate killDate, LocalDate weekStart, Integer partySize) {
         BossKill kill = new BossKill();
         kill.user = user;
         kill.character = character;
@@ -71,6 +75,7 @@ public class BossKill {
         kill.crystalPrice = crystalPrice;
         kill.killDate = killDate;
         kill.weekStart = weekStart;
+        kill.partySize = partySize;
         return kill;
     }
 }

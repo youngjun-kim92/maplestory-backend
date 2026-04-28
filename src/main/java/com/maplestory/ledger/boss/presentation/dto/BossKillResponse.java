@@ -14,6 +14,7 @@ public record BossKillResponse(
         LocalDate weekStart,
         Long characterId,
         String characterName,
+        Integer partySize,
         LocalDateTime createdAt
 ) {
     public static BossKillResponse from(BossKill kill) {
@@ -26,6 +27,7 @@ public record BossKillResponse(
                 kill.getWeekStart(),
                 kill.getCharacter() != null ? kill.getCharacter().getId() : null,
                 kill.getCharacter() != null ? kill.getCharacter().getName() : null,
+                kill.getPartySize(),
                 kill.getCreatedAt()
         );
     }

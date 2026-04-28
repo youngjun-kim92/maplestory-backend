@@ -76,7 +76,7 @@ public class BossService {
         BossKill kill = bossKillRepository.save(
                 BossKill.create(user, character, ledgerEntry,
                         cmd.bossName(), cmd.difficulty(), bossMaster.getCrystalPrice(),
-                        cmd.killDate(), weekStart)
+                        cmd.killDate(), weekStart, cmd.partySize())
         );
         return BossKillResponse.from(kill);
     }

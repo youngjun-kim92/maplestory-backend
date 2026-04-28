@@ -8,11 +8,12 @@ public record RecordBossKillCommand(
         String bossName,
         String difficulty,
         LocalDate killDate,
-        Long characterId
+        Long characterId,
+        Integer partySize
 ) {
     public static RecordBossKillCommand from(BossKillRequest req) {
         return new RecordBossKillCommand(
-                req.bossName(), req.difficulty(), req.killDate(), req.characterId()
+                req.bossName(), req.difficulty(), req.killDate(), req.characterId(), req.partySize()
         );
     }
 }
