@@ -3,11 +3,19 @@ package com.maplestory.ledger.boss.application;
 import com.maplestory.ledger.auth.domain.User;
 import com.maplestory.ledger.auth.infrastructure.UserRepository;
 import com.maplestory.ledger.boss.application.command.RecordBossKillCommand;
+import com.maplestory.ledger.boss.application.command.RecordDropCommand;
+import com.maplestory.ledger.boss.application.command.SellDropCommand;
+import com.maplestory.ledger.boss.domain.BossDropMaster;
+import com.maplestory.ledger.boss.domain.BossDropRecord;
 import com.maplestory.ledger.boss.domain.BossKill;
 import com.maplestory.ledger.boss.domain.BossMaster;
+import com.maplestory.ledger.boss.infrastructure.BossDropMasterRepository;
+import com.maplestory.ledger.boss.infrastructure.BossDropRecordRepository;
 import com.maplestory.ledger.boss.infrastructure.BossKillRepository;
 import com.maplestory.ledger.boss.infrastructure.BossMasterRepository;
 import com.maplestory.ledger.boss.infrastructure.projection.BossStatsProjection;
+import com.maplestory.ledger.boss.presentation.dto.BossDropMasterResponse;
+import com.maplestory.ledger.boss.presentation.dto.BossDropRecordResponse;
 import com.maplestory.ledger.boss.presentation.dto.BossKillResponse;
 import com.maplestory.ledger.boss.presentation.dto.BossMasterResponse;
 import com.maplestory.ledger.character.domain.MapleCharacter;
@@ -29,6 +37,8 @@ public class BossService {
 
     private final BossKillRepository bossKillRepository;
     private final BossMasterRepository bossMasterRepository;
+    private final BossDropMasterRepository bossDropMasterRepository;
+    private final BossDropRecordRepository bossDropRecordRepository;
     private final LedgerEntryRepository ledgerEntryRepository;
     private final CharacterRepository characterRepository;
     private final UserRepository userRepository;
@@ -82,6 +92,73 @@ public class BossService {
     @Transactional(readOnly = true)
     public List<BossStatsProjection> getBossStats(Long userId) {
         return bossKillRepository.findBossStats(userId);
+    }
+
+    // ── 드랍 마스터 ──────────────────────────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public List<BossDropMasterResponse> getBossDropItems(String bossName, String difficulty) {
+        return bossDropMasterRepository.findByBossNameAndDifficulty(bossName, difficulty)
+                .stream().map(BossDropMasterResponse::from).toList();
+    }
+
+    // ── 드랍 기록 ────────────────────────────────────────────────────────────
+
+    @Transactional
+    public BossDropRecordResponse recordDrop(Long userId, RecordDropCommand cmd) {
+        BossKill bossKill = bossKillRepository.findByIdAndUserId(cmd.bossKillId(), userId)
+                .orElseThrow(() -> new ResourceNotFoundException("보스 처치 기록을 찾을 수 없습니다."));
+
+        BossDropMaster.ItemCategory category = bossDropMasterRepository
+                .findByBossNameAndDifficulty(bossKill.getBossName(), bossKill.getDifficulty())
+                .stream()
+                .filter(m -> m.getItemName().equals(cmd.itemName()))
+                .findFirst()
+                .map(BossDropMaster::getItemCategory)
+                .orElse(BossDropMaster.ItemCategory.other);
+
+        BossDropRecord record = bossDropRecordRepository.save(
+                BossDropRecord.create(
+                        bossKill.getUser(), bossKill.getCharacter(), bossKill,
+                        cmd.itemName(), category, bossKill.getWeekStart()
+                )
+        );
+        return BossDropRecordResponse.from(record);
+    }
+
+    @Transactional
+    public BossDropRecordResponse sellDrop(Long userId, SellDropCommand cmd) {
+        BossDropRecord dropRecord = bossDropRecordRepository.findByIdAndUserId(cmd.dropRecordId(), userId)
+                .orElseThrow(() -> new ResourceNotFoundException("드랍 기록을 찾을 수 없습니다."));
+
+        LocalDate weekStart = WeekUtil.getWeekStart(cmd.saleDate());
+        String description = dropRecord.getItemName() + " 경매장 판매 ("
+                + dropRecord.getBossKill().getBossName() + " "
+                + dropRecord.getBossKill().getDifficulty() + ")";
+
+        LedgerEntry ledgerEntry = ledgerEntryRepository.save(
+                LedgerEntry.create(dropRecord.getUser(), dropRecord.getCharacter(),
+                        LedgerEntry.EntryType.income, LedgerEntry.EntryCategory.auction,
+                        cmd.saleAmount(), description, cmd.saleDate(), weekStart)
+        );
+
+        dropRecord.sell(cmd.saleAmount(), cmd.saleDate(), ledgerEntry);
+        return BossDropRecordResponse.from(dropRecord);
+    }
+
+    @Transactional(readOnly = true)
+    public List<BossDropRecordResponse> getWeeklyDropRecords(Long userId, LocalDate weekStartParam) {
+        LocalDate weekStart = weekStartParam != null ? weekStartParam : WeekUtil.getWeekStart();
+        return bossDropRecordRepository.findByUserIdAndWeekStartOrderByCreatedAtDesc(userId, weekStart)
+                .stream().map(BossDropRecordResponse::from).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<BossDropRecordResponse> getDropsByBossKill(Long userId, Long bossKillId) {
+        bossKillRepository.findByIdAndUserId(bossKillId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("보스 처치 기록을 찾을 수 없습니다."));
+        return bossDropRecordRepository.findByBossKillId(bossKillId)
+                .stream().map(BossDropRecordResponse::from).toList();
     }
 
     private MapleCharacter resolveCharacter(Long userId, Long characterId) {

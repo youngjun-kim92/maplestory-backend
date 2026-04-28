@@ -91,3 +91,87 @@ INSERT INTO boss_master (boss_name, difficulty, crystal_price, max_attempts_per_
 -- ────────────────────────────────────────────────────────────
 ('검은 마법사',   'hard',    700000000,  1, 'monthly'),
 ('검은 마법사',   'extreme', 9200000000, 1, 'monthly');
+
+-- ────────────────────────────────────────────────────────────
+-- 보스 드랍 물욕템 마스터 데이터
+-- item_category: dark_accessory(칠흑), radiant_accessory(광휘), dawn_accessory(여명), other(기타)
+-- ────────────────────────────────────────────────────────────
+DELETE FROM boss_drop_master;
+
+INSERT INTO boss_drop_master (boss_name, difficulty, item_name, item_category) VALUES
+-- 스우
+('스우', 'hard',    '루즈 컨트롤 머신 마크',   'dark_accessory'),
+('스우', 'extreme', '루즈 컨트롤 머신 마크',   'dark_accessory'),
+('스우', 'extreme', '컴플리트 언더컨트롤',     'dark_accessory'),
+
+-- 데미안
+('데미안', 'hard',  '마력이 깃든 안대',        'dark_accessory'),
+
+-- 가디언 엔젤 슬라임
+('가디언 엔젤 슬라임', 'normal', '가디언 엔젤 링', 'dawn_accessory'),
+('가디언 엔젤 슬라임', 'chaos',  '가디언 엔젤 링', 'dawn_accessory'),
+
+-- 루시드
+('루시드', 'hard', '몽환의 벨트',              'dark_accessory'),
+('루시드', 'hard', '트와일라이트 마크',         'dawn_accessory'),
+
+-- 윌
+('윌', 'hard', '저주받은 마도서',              'dark_accessory'),
+('윌', 'hard', '트와일라이트 마크',            'dawn_accessory'),
+
+-- 더스크
+('더스크', 'chaos', '거대한 공포',             'dark_accessory'),
+('더스크', 'chaos', '에스텔라 이어링',         'dawn_accessory'),
+
+-- 듄켈
+('듄켈', 'hard', '커맨더 포스 이어링',         'dark_accessory'),
+('듄켈', 'hard', '에스텔라 이어링',            'dawn_accessory'),
+
+-- 진 힐라
+('진 힐라', 'hard', '고통의 근원',             'dark_accessory'),
+('진 힐라', 'hard', '데이브레이크 펜던트',      'dawn_accessory'),
+
+-- 검은 마법사
+('검은 마법사', 'hard',    '창세의 뱃지',             'dark_accessory'),
+('검은 마법사', 'extreme', '창세의 뱃지',             'dark_accessory'),
+('검은 마법사', 'extreme', '익셉셔널 해머 (벨트)',     'other'),
+
+-- 선택받은 세렌
+('선택받은 세렌', 'hard',    '미트라의 분노',            'dark_accessory'),
+('선택받은 세렌', 'hard',    '데이브레이크 펜던트',       'dawn_accessory'),
+('선택받은 세렌', 'extreme', '미트라의 분노',            'dark_accessory'),
+('선택받은 세렌', 'extreme', '데이브레이크 펜던트',       'dawn_accessory'),
+('선택받은 세렌', 'extreme', '익셉셔널 해머 (얼굴장식)', 'other'),
+
+-- 감시자 칼로스
+('감시자 칼로스', 'chaos',   '생명의 연마석',            'other'),
+('감시자 칼로스', 'chaos',   '생명의 보스 반지 상자',     'other'),
+('감시자 칼로스', 'extreme', '생명의 연마석',            'other'),
+('감시자 칼로스', 'extreme', '생명의 보스 반지 상자',     'other'),
+('감시자 칼로스', 'extreme', '익셉셔널 해머 (눈장식)',    'other'),
+
+-- 카링
+('카링', 'hard',    '신념의 연마석',            'other'),
+('카링', 'hard',    '신념의 보스 반지 상자',     'other'),
+('카링', 'extreme', '신념의 연마석',            'other'),
+('카링', 'extreme', '신념의 보스 반지 상자',     'other'),
+('카링', 'extreme', '익셉셔널 해머 (귀고리)',    'other'),
+
+-- 찬란한 흉성
+('찬란한 흉성', 'hard', '황홀한 악몽',          'radiant_accessory'),
+('찬란한 흉성', 'hard', '생명의 연마석',         'other'),
+('찬란한 흉성', 'hard', '백옥의 보스 반지 상자', 'other'),
+
+-- 최초의 대적자
+('최초의 대적자', 'hard',    '불멸의 유산',              'radiant_accessory'),
+('최초의 대적자', 'extreme', '불멸의 유산',              'radiant_accessory'),
+('최초의 대적자', 'extreme', '익셉셔널 해머 (훈장)',      'other'),
+
+-- 림보
+('림보', 'hard', '근원의 속삭임',              'radiant_accessory'),
+
+-- 발드릭스
+('발드릭스', 'hard', '죽음의 맹세',             'radiant_accessory'),
+
+-- 유피테르
+('유피테르', 'hard', '오만의 원죄',             'radiant_accessory');
