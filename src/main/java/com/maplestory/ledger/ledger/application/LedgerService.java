@@ -14,6 +14,7 @@ import com.maplestory.ledger.ledger.domain.LedgerEntry.EntryType;
 import com.maplestory.ledger.ledger.infrastructure.LedgerEntryRepository;
 import com.maplestory.ledger.ledger.presentation.dto.AddEntryResponse;
 import com.maplestory.ledger.ledger.presentation.dto.CategoryStatResponse;
+import com.maplestory.ledger.ledger.presentation.dto.IncomeSourceTrendResponse;
 import com.maplestory.ledger.ledger.presentation.dto.LedgerEntryResponse;
 import com.maplestory.ledger.ledger.presentation.dto.WeekSummaryResponse;
 import com.maplestory.ledger.ledger.presentation.dto.WeeklyLedgerResponse;
@@ -92,6 +93,21 @@ public class LedgerService {
                 .map(row -> new CategoryStatResponse(
                         (String) row[0],
                         (String) row[1],
+                        ((Number) row[2]).longValue(),
+                        ((Number) row[3]).longValue(),
+                        ((Number) row[4]).longValue()
+                ))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<IncomeSourceTrendResponse> getIncomeSourceTrend(Long userId, int weeks) {
+        LocalDate startDate = WeekUtil.getWeekStart().minusWeeks(weeks - 1L);
+        return ledgerEntryRepository.findIncomeSourceTrend(userId, startDate)
+                .stream()
+                .map(row -> new IncomeSourceTrendResponse(
+                        ((java.sql.Date) row[0]).toLocalDate(),
+                        ((Number) row[1]).longValue(),
                         ((Number) row[2]).longValue(),
                         ((Number) row[3]).longValue(),
                         ((Number) row[4]).longValue()

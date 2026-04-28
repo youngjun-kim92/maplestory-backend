@@ -2,13 +2,13 @@ package com.maplestory.ledger.character.application;
 
 import com.maplestory.ledger.auth.domain.User;
 import com.maplestory.ledger.auth.infrastructure.UserRepository;
-import com.maplestory.ledger.boss.infrastructure.BossKillRepository;
 import com.maplestory.ledger.character.domain.MapleCharacter;
 import com.maplestory.ledger.character.infrastructure.CharacterRepository;
 import com.maplestory.ledger.character.presentation.dto.CharacterRequest;
 import com.maplestory.ledger.character.presentation.dto.CharacterROIResponse;
 import com.maplestory.ledger.character.presentation.dto.CharacterResponse;
 import com.maplestory.ledger.common.exception.ResourceNotFoundException;
+import com.maplestory.ledger.ledger.infrastructure.LedgerEntryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +21,7 @@ public class CharacterService {
 
     private final CharacterRepository characterRepository;
     private final UserRepository userRepository;
-    private final BossKillRepository bossKillRepository;
+    private final LedgerEntryRepository ledgerEntryRepository;
 
     @Transactional
     public CharacterResponse createCharacter(Long userId, CharacterRequest req) {
@@ -58,7 +58,7 @@ public class CharacterService {
         MapleCharacter character = characterRepository.findByIdAndUserId(characterId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("캐릭터를 찾을 수 없습니다."));
 
-        List<Object[]> weeklyData = bossKillRepository.findWeeklyIncomeByCharacter(userId, characterId);
+        List<Object[]> weeklyData = ledgerEntryRepository.findCharacterBossIncomeByWeek(userId, characterId);
         long cumulativeBossIncome = weeklyData.stream()
                 .mapToLong(row -> ((Number) row[1]).longValue()).sum();
         long weeklyAvgBossIncome = weeklyData.isEmpty() ? 0L

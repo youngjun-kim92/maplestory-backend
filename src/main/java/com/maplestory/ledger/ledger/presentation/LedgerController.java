@@ -5,6 +5,7 @@ import com.maplestory.ledger.ledger.application.LedgerService;
 import com.maplestory.ledger.ledger.application.command.AddLedgerEntryCommand;
 import com.maplestory.ledger.ledger.presentation.dto.AddEntryResponse;
 import com.maplestory.ledger.ledger.presentation.dto.CategoryStatResponse;
+import com.maplestory.ledger.ledger.presentation.dto.IncomeSourceTrendResponse;
 import com.maplestory.ledger.ledger.presentation.dto.LedgerEntryRequest;
 import com.maplestory.ledger.ledger.presentation.dto.WeekSummaryResponse;
 import com.maplestory.ledger.ledger.presentation.dto.WeeklyLedgerResponse;
@@ -60,5 +61,12 @@ public class LedgerController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(defaultValue = "4") int weeks) {
         return ResponseEntity.ok(ledgerService.getCategoryStats(userDetails.getUserId(), weeks));
+    }
+
+    @GetMapping("/income-trend")
+    public ResponseEntity<List<IncomeSourceTrendResponse>> getIncomeSourceTrend(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam(defaultValue = "8") int weeks) {
+        return ResponseEntity.ok(ledgerService.getIncomeSourceTrend(userDetails.getUserId(), weeks));
     }
 }

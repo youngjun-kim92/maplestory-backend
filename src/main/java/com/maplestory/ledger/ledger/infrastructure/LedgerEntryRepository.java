@@ -73,4 +73,28 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, Long> 
             """, nativeQuery = true)
     List<UserWeeklyAvgProjection> findAllUsersAvgWeeklyIncome(@Param("startDate") LocalDate startDate,
                                                                @Param("endDate") LocalDate endDate);
+
+    @Query(value = """
+            SELECT week_start,
+                   SUM(CASE WHEN category = 'boss'    AND type = 'income' THEN amount ELSE 0 END) as bossIncome,
+                   SUM(CASE WHEN category = 'hunting' AND type = 'income' THEN amount ELSE 0 END) as huntingIncome,
+                   SUM(CASE WHEN category = 'auction' AND type = 'income' THEN amount ELSE 0 END) as auctionIncome,
+                   SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as totalIncome
+            FROM ledger_entries
+            WHERE user_id = :userId AND week_start >= :startDate
+            GROUP BY week_start
+            ORDER BY week_start ASC
+            """, nativeQuery = true)
+    List<Object[]> findIncomeSourceTrend(@Param("userId") Long userId, @Param("startDate") LocalDate startDate);
+
+    @Query(value = """
+            SELECT week_start,
+                   SUM(CASE WHEN category = 'boss' THEN amount ELSE 0 END) as bossIncome
+            FROM ledger_entries
+            WHERE user_id = :userId AND character_id = :characterId AND type = 'income'
+            GROUP BY week_start
+            ORDER BY week_start ASC
+            """, nativeQuery = true)
+    List<Object[]> findCharacterBossIncomeByWeek(@Param("userId") Long userId,
+                                                  @Param("characterId") Long characterId);
 }
