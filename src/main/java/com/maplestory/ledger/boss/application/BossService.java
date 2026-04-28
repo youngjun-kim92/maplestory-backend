@@ -105,6 +105,14 @@ public class BossService {
     // ── 드랍 기록 ────────────────────────────────────────────────────────────
 
     @Transactional
+    public BossDropRecordResponse listDrop(Long userId, Long dropRecordId) {
+        BossDropRecord dropRecord = bossDropRecordRepository.findByIdAndUserId(dropRecordId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("드랍 기록을 찾을 수 없습니다."));
+        dropRecord.list();
+        return BossDropRecordResponse.from(dropRecord);
+    }
+
+    @Transactional
     public BossDropRecordResponse recordDrop(Long userId, RecordDropCommand cmd) {
         BossKill bossKill = bossKillRepository.findByIdAndUserId(cmd.bossKillId(), userId)
                 .orElseThrow(() -> new ResourceNotFoundException("보스 처치 기록을 찾을 수 없습니다."));

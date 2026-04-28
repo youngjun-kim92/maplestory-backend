@@ -66,8 +66,9 @@ public class BossDropRecord {
     private LocalDateTime createdAt;
 
     public enum DropStatus {
-        holding,
-        sold
+        holding,  // 보유 중
+        listed,   // 경매장 등록 중
+        sold      // 판매 완료
     }
 
     public static BossDropRecord create(User user, MapleCharacter character, BossKill bossKill,
@@ -82,6 +83,13 @@ public class BossDropRecord {
         r.status = DropStatus.holding;
         r.weekStart = weekStart;
         return r;
+    }
+
+    public void list() {
+        if (this.status == DropStatus.sold) {
+            throw new IllegalStateException("이미 판매된 아이템은 경매장에 등록할 수 없습니다.");
+        }
+        this.status = DropStatus.listed;
     }
 
     public void sell(Long saleAmount, LocalDate saleDate, LedgerEntry ledgerEntry) {

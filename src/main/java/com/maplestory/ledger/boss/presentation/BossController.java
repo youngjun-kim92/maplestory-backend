@@ -79,7 +79,15 @@ public class BossController {
                 .body(bossService.recordDrop(userDetails.getUserId(), RecordDropCommand.from(killId, req)));
     }
 
-    /** 드랍 아이템 경매장 판매 처리 → auction LedgerEntry 자동 생성 */
+    /** 드랍 아이템 경매장 등록 (holding → listed) */
+    @PatchMapping("/drops/{id}/list")
+    public ResponseEntity<BossDropRecordResponse> listDrop(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(bossService.listDrop(userDetails.getUserId(), id));
+    }
+
+    /** 경매장 판매 완료 처리 → auction LedgerEntry 자동 생성 */
     @PatchMapping("/drops/{id}/sell")
     public ResponseEntity<BossDropRecordResponse> sellDrop(
             @AuthenticationPrincipal CustomUserDetails userDetails,
