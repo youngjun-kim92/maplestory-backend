@@ -36,6 +36,10 @@ dependencies {
     testImplementation 'org.springframework.security:spring-security-test'
 }
 
+compileJava {
+    options.compilerArgs << '-parameters'
+}
+
 tasks.named('test') {
     useJUnitPlatform()
 }
