@@ -60,22 +60,22 @@ public class CharacterService {
                 .orElseThrow(() -> new ResourceNotFoundException("캐릭터를 찾을 수 없습니다."));
 
         List<Object[]> weeklyData = ledgerEntryRepository.findCharacterBossIncomeByWeek(userId, characterId);
-        long cumulativeBossIncome = weeklyData.stream()
+        long cumulativeIncome = weeklyData.stream()
                 .mapToLong(row -> ((Number) row[1]).longValue()).sum();
-        long weeklyAvgBossIncome = weeklyData.isEmpty() ? 0L
-                : cumulativeBossIncome / weeklyData.size();
+        long weeklyAvgIncome = weeklyData.isEmpty() ? 0L
+                : cumulativeIncome / weeklyData.size();
 
+        long initialInvestment = character.getInitialInvestment() != null ? character.getInitialInvestment() : 0L;
         Long weeksToBreakEven = null;
-        if (weeklyAvgBossIncome > 0 && character.getInitialInvestment() > 0) {
-            weeksToBreakEven = (long) Math.ceil(
-                    (double) character.getInitialInvestment() / weeklyAvgBossIncome);
+        if (weeklyAvgIncome > 0 && initialInvestment > 0) {
+            weeksToBreakEven = (long) Math.ceil((double) initialInvestment / weeklyAvgIncome);
         }
-        boolean isBreakEvenReached = cumulativeBossIncome >= character.getInitialInvestment();
-        long remainingToBreakEven = Math.max(0, character.getInitialInvestment() - cumulativeBossIncome);
+        boolean isBreakEvenReached = initialInvestment == 0 || cumulativeIncome >= initialInvestment;
+        long remainingToBreakEven = Math.max(0, initialInvestment - cumulativeIncome);
 
         return new CharacterROIResponse(
-                character.getId(), character.getName(), character.getInitialInvestment(),
-                cumulativeBossIncome, weeklyAvgBossIncome, weeksToBreakEven,
+                character.getId(), character.getName(), initialInvestment,
+                cumulativeIncome, weeklyAvgIncome, weeksToBreakEven,
                 isBreakEvenReached, remainingToBreakEven
         );
     }

@@ -4,8 +4,8 @@ public record CharacterROIResponse(
         Long characterId,
         String characterName,
         Long initialInvestment,
-        Long cumulativeBossIncome,
-        Long weeklyAvgBossIncome,
+        Long cumulativeIncome,
+        Long weeklyAvgIncome,
         Long weeksToBreakEven,
         boolean isBreakEvenReached,
         Long remainingToBreakEven

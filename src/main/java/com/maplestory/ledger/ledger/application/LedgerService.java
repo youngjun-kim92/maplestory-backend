@@ -70,6 +70,7 @@ public class LedgerService {
         long delta = cmd.type() == EntryType.income ? cmd.amount() : -cmd.amount();
         long newInventory = Math.max(0, user.getInventoryMeso() + delta);
         user.updateMesoBalance(newInventory, user.getStorageMeso());
+        userRepository.save(user);
 
         List<GoalWarning> warnings = List.of();
         if (cmd.type() == EntryType.expense) {
@@ -89,6 +90,7 @@ public class LedgerService {
         long delta = entry.getType() == EntryType.income ? -entry.getAmount() : entry.getAmount();
         long newInventory = Math.max(0, user.getInventoryMeso() + delta);
         user.updateMesoBalance(newInventory, user.getStorageMeso());
+        userRepository.save(user);
 
         ledgerEntryRepository.delete(entry);
     }

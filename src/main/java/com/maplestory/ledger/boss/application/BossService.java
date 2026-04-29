@@ -78,6 +78,7 @@ public class BossService {
         );
 
         user.updateMesoBalance(user.getInventoryMeso() + income, user.getStorageMeso());
+        userRepository.save(user);
 
         BossKill kill = bossKillRepository.save(
                 BossKill.create(user, character, ledgerEntry,
@@ -159,6 +160,7 @@ public class BossService {
         );
 
         user.updateMesoBalance(user.getInventoryMeso() + cmd.saleAmount(), user.getStorageMeso());
+        userRepository.save(user);
 
         dropRecord.sell(cmd.saleAmount(), cmd.saleDate(), ledgerEntry);
         return BossDropRecordResponse.from(dropRecord);

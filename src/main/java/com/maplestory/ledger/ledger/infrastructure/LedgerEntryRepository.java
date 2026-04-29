@@ -89,7 +89,7 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, Long> 
 
     @Query(value = """
             SELECT week_start,
-                   SUM(CASE WHEN category = 'boss' THEN amount ELSE 0 END) as bossIncome
+                   SUM(amount) as totalIncome
             FROM ledger_entries
             WHERE user_id = :userId AND character_id = :characterId AND type = 'income'
             GROUP BY week_start
