@@ -8,7 +8,7 @@ public record GoalResponse(
         Long id,
         String itemName,
         Long targetAmount,
-        Boolean isAchieved,
+        Boolean achieved,
         LocalDateTime createdAt,
         LocalDateTime achievedAt
 ) {
