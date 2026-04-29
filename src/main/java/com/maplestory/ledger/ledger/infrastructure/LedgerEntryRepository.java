@@ -97,4 +97,20 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, Long> 
             """, nativeQuery = true)
     List<Object[]> findCharacterBossIncomeByWeek(@Param("userId") Long userId,
                                                   @Param("characterId") Long characterId);
+
+    @Query(value = """
+            SELECT le.character_id as characterId,
+                   c.name as characterName,
+                   c.job_class as jobClass,
+                   c.is_main as isMain,
+                   SUM(CASE WHEN le.type = 'income' THEN le.amount ELSE 0 END) as totalIncome,
+                   SUM(CASE WHEN le.type = 'expense' THEN le.amount ELSE 0 END) as totalExpense,
+                   COUNT(*) as entryCount
+            FROM ledger_entries le
+            JOIN characters c ON le.character_id = c.id
+            WHERE le.user_id = :userId AND le.character_id IS NOT NULL
+            GROUP BY le.character_id, c.name, c.job_class, c.is_main
+            ORDER BY totalIncome DESC
+            """, nativeQuery = true)
+    List<Object[]> findCharacterStats(@Param("userId") Long userId);
 }

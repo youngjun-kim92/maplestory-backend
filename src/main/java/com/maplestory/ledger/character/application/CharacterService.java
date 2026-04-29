@@ -7,6 +7,7 @@ import com.maplestory.ledger.character.infrastructure.CharacterRepository;
 import com.maplestory.ledger.character.presentation.dto.CharacterRequest;
 import com.maplestory.ledger.character.presentation.dto.CharacterROIResponse;
 import com.maplestory.ledger.character.presentation.dto.CharacterResponse;
+import com.maplestory.ledger.character.presentation.dto.CharacterStatsResponse;
 import com.maplestory.ledger.common.exception.ResourceNotFoundException;
 import com.maplestory.ledger.ledger.infrastructure.LedgerEntryRepository;
 import lombok.RequiredArgsConstructor;
@@ -77,5 +78,11 @@ public class CharacterService {
                 cumulativeBossIncome, weeklyAvgBossIncome, weeksToBreakEven,
                 isBreakEvenReached, remainingToBreakEven
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<CharacterStatsResponse> getCharacterStats(Long userId) {
+        return ledgerEntryRepository.findCharacterStats(userId)
+                .stream().map(CharacterStatsResponse::from).toList();
     }
 }

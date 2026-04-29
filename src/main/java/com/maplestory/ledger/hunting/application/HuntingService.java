@@ -54,6 +54,8 @@ public class HuntingService {
                         req.sessionDate(), weekStart)
         );
 
+        user.updateMesoBalance(user.getInventoryMeso() + totalIncome, user.getStorageMeso());
+
         HuntingSession session = huntingSessionRepository.save(
                 HuntingSession.create(user, character, ledgerEntry,
                         req.mapName(), req.durationMinutes(), req.income(),

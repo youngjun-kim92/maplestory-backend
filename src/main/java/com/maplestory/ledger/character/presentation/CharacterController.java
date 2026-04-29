@@ -4,6 +4,7 @@ import com.maplestory.ledger.character.application.CharacterService;
 import com.maplestory.ledger.character.presentation.dto.CharacterROIResponse;
 import com.maplestory.ledger.character.presentation.dto.CharacterRequest;
 import com.maplestory.ledger.character.presentation.dto.CharacterResponse;
+import com.maplestory.ledger.character.presentation.dto.CharacterStatsResponse;
 import com.maplestory.ledger.common.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -56,5 +57,11 @@ public class CharacterController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id) {
         return ResponseEntity.ok(characterService.getCharacterROI(userDetails.getUserId(), id));
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<List<CharacterStatsResponse>> getCharacterStats(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ResponseEntity.ok(characterService.getCharacterStats(userDetails.getUserId()));
     }
 }

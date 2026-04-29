@@ -61,17 +61,23 @@ public class BossService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "보스 정보를 찾을 수 없습니다: " + cmd.bossName() + " " + cmd.difficulty()));
 
-        User user = userRepository.getReferenceById(userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
         MapleCharacter character = resolveCharacter(userId, cmd.characterId());
         LocalDate weekStart = WeekUtil.getWeekStart(cmd.killDate());
+
+        int partySize = (cmd.partySize() != null && cmd.partySize() > 1) ? cmd.partySize() : 1;
+        long income = bossMaster.getCrystalPrice() / partySize;
+        String description = cmd.bossName() + " " + cmd.difficulty() + " 결정석"
+                + (partySize > 1 ? " (" + partySize + "인 파티 1/" + partySize + ")" : "");
 
         LedgerEntry ledgerEntry = ledgerEntryRepository.save(
                 LedgerEntry.create(user, character,
                         LedgerEntry.EntryType.income, LedgerEntry.EntryCategory.boss,
-                        bossMaster.getCrystalPrice(),
-                        cmd.bossName() + " " + cmd.difficulty() + " 결정석",
-                        cmd.killDate(), weekStart)
+                        income, description, cmd.killDate(), weekStart)
         );
+
+        user.updateMesoBalance(user.getInventoryMeso() + income, user.getStorageMeso());
 
         BossKill kill = bossKillRepository.save(
                 BossKill.create(user, character, ledgerEntry,
@@ -136,6 +142,8 @@ public class BossService {
 
     @Transactional
     public BossDropRecordResponse sellDrop(Long userId, SellDropCommand cmd) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
         BossDropRecord dropRecord = bossDropRecordRepository.findByIdAndUserId(cmd.dropRecordId(), userId)
                 .orElseThrow(() -> new ResourceNotFoundException("드랍 기록을 찾을 수 없습니다."));
 
@@ -149,6 +157,8 @@ public class BossService {
                         LedgerEntry.EntryType.income, LedgerEntry.EntryCategory.auction,
                         cmd.saleAmount(), description, cmd.saleDate(), weekStart)
         );
+
+        user.updateMesoBalance(user.getInventoryMeso() + cmd.saleAmount(), user.getStorageMeso());
 
         dropRecord.sell(cmd.saleAmount(), cmd.saleDate(), ledgerEntry);
         return BossDropRecordResponse.from(dropRecord);
