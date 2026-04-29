@@ -31,4 +31,8 @@ public class BossMaster {
     /** 초기화 주기: daily(매일), weekly(매주 목요일), monthly(매월 1일) */
     @Column(name = "reset_type", nullable = false, length = 10)
     private String resetType = "weekly";
+
+    /** 보스 입장 최대 인원 (기본 6명) */
+    @Column(name = "max_party_size")
+    private Integer maxPartySize = 6;
 }

@@ -8,12 +8,14 @@ public record BossMasterResponse(
         String difficulty,
         Long crystalPrice,
         Integer maxAttemptsPerWeek,
-        String resetType
+        String resetType,
+        Integer maxPartySize
 ) {
     public static BossMasterResponse from(BossMaster b) {
         return new BossMasterResponse(
                 b.getId(), b.getBossName(), b.getDifficulty(),
-                b.getCrystalPrice(), b.getMaxAttemptsPerWeek(), b.getResetType()
+                b.getCrystalPrice(), b.getMaxAttemptsPerWeek(), b.getResetType(),
+                b.getMaxPartySize()
         );
     }
 }

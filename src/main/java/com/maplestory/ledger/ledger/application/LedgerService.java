@@ -56,7 +56,8 @@ public class LedgerService {
 
     @Transactional
     public AddEntryResponse addEntry(Long userId, AddLedgerEntryCommand cmd) {
-        User user = userRepository.getReferenceById(userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
         MapleCharacter character = resolveCharacter(userId, cmd.characterId());
         LocalDate weekStart = WeekUtil.getWeekStart(cmd.entryDate());
 
@@ -64,6 +65,11 @@ public class LedgerService {
                 LedgerEntry.create(user, character, cmd.type(), cmd.category(),
                         cmd.amount(), cmd.description(), cmd.entryDate(), weekStart)
         );
+
+        // 수익/지출 발생 시 인벤토리 메소 즉시 반영
+        long delta = cmd.type() == EntryType.income ? cmd.amount() : -cmd.amount();
+        long newInventory = Math.max(0, user.getInventoryMeso() + delta);
+        user.updateMesoBalance(newInventory, user.getStorageMeso());
 
         List<GoalWarning> warnings = List.of();
         if (cmd.type() == EntryType.expense) {
@@ -74,8 +80,16 @@ public class LedgerService {
 
     @Transactional
     public void deleteEntry(Long userId, Long entryId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
         LedgerEntry entry = ledgerEntryRepository.findByIdAndUserId(entryId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("항목을 찾을 수 없습니다."));
+
+        // 삭제 시 메소 역산
+        long delta = entry.getType() == EntryType.income ? -entry.getAmount() : entry.getAmount();
+        long newInventory = Math.max(0, user.getInventoryMeso() + delta);
+        user.updateMesoBalance(newInventory, user.getStorageMeso());
+
         ledgerEntryRepository.delete(entry);
     }
 
