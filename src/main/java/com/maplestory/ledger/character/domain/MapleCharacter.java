@@ -40,15 +40,30 @@ public class MapleCharacter {
     @Column(name = "initial_investment")
     private Long initialInvestment = 0L;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "mvp_grade", length = 20)
+    private MvpGrade mvpGrade = MvpGrade.NORMAL;
+
     @Column(name = "sol_erda_fragments")
     private Integer solErdaFragments = 0;
+
+    public enum MvpGrade {
+        NORMAL, BRONZE, SILVER, GOLD, DIAMOND, RED, BLACK;
+
+        public double auctionFeeRate() {
+            return switch (this) {
+                case SILVER, GOLD, DIAMOND, RED, BLACK -> 0.03;
+                default -> 0.05;
+            };
+        }
+    }
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     public static MapleCharacter create(User user, String name, String jobClass,
-                                        Integer level, Boolean isMain, Long initialInvestment) {
+                                        Integer level, Boolean isMain, Long initialInvestment, MvpGrade mvpGrade) {
         MapleCharacter c = new MapleCharacter();
         c.user = user;
         c.name = name;
@@ -56,17 +71,20 @@ public class MapleCharacter {
         c.level = level != null ? level : 1;
         c.isMain = isMain != null ? isMain : false;
         c.initialInvestment = initialInvestment != null ? initialInvestment : 0L;
+        c.mvpGrade = mvpGrade != null ? mvpGrade : MvpGrade.NORMAL;
         c.solErdaFragments = 0;
         return c;
     }
 
-    public void update(String name, String jobClass, Integer level, Boolean isMain, Long initialInvestment, Integer solErdaFragments) {
+    public void update(String name, String jobClass, Integer level, Boolean isMain,
+                       Long initialInvestment, Integer solErdaFragments, MvpGrade mvpGrade) {
         if (name != null) this.name = name;
         if (jobClass != null) this.jobClass = jobClass;
         if (level != null) this.level = level;
         if (isMain != null) this.isMain = isMain;
         if (initialInvestment != null) this.initialInvestment = initialInvestment;
         if (solErdaFragments != null) this.solErdaFragments = solErdaFragments;
+        if (mvpGrade != null) this.mvpGrade = mvpGrade;
     }
 
     public void addSolErdaFragments(int count) {

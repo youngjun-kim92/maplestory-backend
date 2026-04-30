@@ -13,6 +13,7 @@ import com.maplestory.ledger.common.exception.DuplicateNicknameException;
 import com.maplestory.ledger.common.exception.InvalidCredentialsException;
 import com.maplestory.ledger.common.exception.ResourceNotFoundException;
 import com.maplestory.ledger.common.security.JwtTokenProvider;
+import com.maplestory.ledger.favorite.infrastructure.FavoriteRepository;
 import com.maplestory.ledger.goal.infrastructure.GoalRepository;
 import com.maplestory.ledger.hunting.infrastructure.HuntingSessionRepository;
 import com.maplestory.ledger.ledger.infrastructure.LedgerEntryRepository;
@@ -34,6 +35,7 @@ public class AuthService {
     private final LedgerEntryRepository ledgerEntryRepository;
     private final GoalRepository goalRepository;
     private final CharacterRepository characterRepository;
+    private final FavoriteRepository favoriteRepository;
 
     @Transactional
     public AuthResponse register(RegisterRequest req) {
@@ -89,6 +91,7 @@ public class AuthService {
         ledgerEntryRepository.deleteByUserId(userId);
         goalRepository.deleteByUserId(userId);
         characterRepository.deleteByUserId(userId);
+        favoriteRepository.deleteByUserId(userId);
         user.updateMesoBalance(0L, 0L);
         user.updateSolErdaPrice(0L);
     }

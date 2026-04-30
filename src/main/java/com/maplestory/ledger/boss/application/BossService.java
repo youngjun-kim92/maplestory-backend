@@ -77,7 +77,20 @@ public class BossService {
                         income, description, cmd.killDate(), weekStart)
         );
 
-        user.updateMesoBalance(user.getInventoryMeso() + income, user.getStorageMeso());
+        // 도핑비 등 인라인 지출 처리
+        long totalExpense = 0L;
+        for (RecordBossKillCommand.InlineExpense exp : cmd.expenses()) {
+            LedgerEntry.EntryCategory cat;
+            try { cat = LedgerEntry.EntryCategory.valueOf(exp.category()); }
+            catch (IllegalArgumentException ignored) { cat = LedgerEntry.EntryCategory.other; }
+            ledgerEntryRepository.save(LedgerEntry.create(user, character,
+                    LedgerEntry.EntryType.expense, cat, exp.amount(),
+                    exp.description(), cmd.killDate(), weekStart));
+            totalExpense += exp.amount();
+        }
+
+        long newInventory = Math.max(0, user.getInventoryMeso() + income - totalExpense);
+        user.updateMesoBalance(newInventory, user.getStorageMeso());
         userRepository.save(user);
 
         BossKill kill = bossKillRepository.save(
@@ -149,17 +162,23 @@ public class BossService {
                 .orElseThrow(() -> new ResourceNotFoundException("드랍 기록을 찾을 수 없습니다."));
 
         LocalDate weekStart = WeekUtil.getWeekStart(cmd.saleDate());
+
+        double feeRate = calcAuctionFeeRate(dropRecord.getCharacter(), cmd.isPcCafe());
+        long netAmount = Math.round(cmd.saleAmount() * (1.0 - feeRate));
+        int feePercent = (int) Math.round(feeRate * 100);
+
         String description = dropRecord.getItemName() + " 경매장 판매 ("
                 + dropRecord.getBossKill().getBossName() + " "
-                + dropRecord.getBossKill().getDifficulty() + ")";
+                + dropRecord.getBossKill().getDifficulty()
+                + ", 수수료 " + feePercent + "% 적용)";
 
         LedgerEntry ledgerEntry = ledgerEntryRepository.save(
                 LedgerEntry.create(dropRecord.getUser(), dropRecord.getCharacter(),
                         LedgerEntry.EntryType.income, LedgerEntry.EntryCategory.auction,
-                        cmd.saleAmount(), description, cmd.saleDate(), weekStart)
+                        netAmount, description, cmd.saleDate(), weekStart)
         );
 
-        user.updateMesoBalance(user.getInventoryMeso() + cmd.saleAmount(), user.getStorageMeso());
+        user.updateMesoBalance(user.getInventoryMeso() + netAmount, user.getStorageMeso());
         userRepository.save(user);
 
         dropRecord.sell(cmd.saleAmount(), cmd.saleDate(), ledgerEntry);
@@ -185,5 +204,11 @@ public class BossService {
         if (characterId == null) return null;
         return characterRepository.findByIdAndUserId(characterId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("캐릭터를 찾을 수 없습니다."));
+    }
+
+    private double calcAuctionFeeRate(MapleCharacter character, Boolean isPcCafe) {
+        if (Boolean.TRUE.equals(isPcCafe)) return 0.03;
+        if (character == null || character.getMvpGrade() == null) return 0.05;
+        return character.getMvpGrade().auctionFeeRate();
     }
 }

@@ -12,6 +12,7 @@ public record CharacterResponse(
         Boolean isMain,
         Long initialInvestment,
         Integer solErdaFragments,
+        String mvpGrade,
         LocalDateTime createdAt
 ) {
     public static CharacterResponse from(MapleCharacter c) {
@@ -19,6 +20,7 @@ public record CharacterResponse(
                 c.getId(), c.getName(), c.getJobClass(),
                 c.getLevel(), c.getIsMain(), c.getInitialInvestment(),
                 c.getSolErdaFragments() != null ? c.getSolErdaFragments() : 0,
+                c.getMvpGrade() != null ? c.getMvpGrade().name() : "NORMAL",
                 c.getCreatedAt()
         );
     }

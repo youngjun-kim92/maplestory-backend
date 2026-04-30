@@ -36,9 +36,14 @@ public class CharacterService {
         }
         User user = userRepository.getReferenceById(userId);
         MapleCharacter character = MapleCharacter.create(
-                user, req.name(), req.jobClass(), req.level(), req.isMain(), req.initialInvestment()
+                user, req.name(), req.jobClass(), req.level(), req.isMain(), req.initialInvestment(), req.mvpGrade()
         );
         return CharacterResponse.from(characterRepository.save(character));
+    }
+
+    @Transactional
+    public List<CharacterResponse> createCharacters(Long userId, List<CharacterRequest> requests) {
+        return requests.stream().map(req -> createCharacter(userId, req)).toList();
     }
 
     @Transactional(readOnly = true)
@@ -55,7 +60,7 @@ public class CharacterService {
             characterRepository.findByUserIdAndIsMainTrue(userId)
                     .ifPresent(prev -> { prev.unsetMain(); characterRepository.save(prev); });
         }
-        character.update(req.name(), req.jobClass(), req.level(), req.isMain(), req.initialInvestment(), req.solErdaFragments());
+        character.update(req.name(), req.jobClass(), req.level(), req.isMain(), req.initialInvestment(), req.solErdaFragments(), req.mvpGrade());
         return CharacterResponse.from(characterRepository.save(character));
     }
 

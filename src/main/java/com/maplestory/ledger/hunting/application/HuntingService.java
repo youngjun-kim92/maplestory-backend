@@ -42,7 +42,8 @@ public class HuntingService {
         MapleCharacter character = resolveCharacter(userId, req.characterId());
 
         int fragments = req.solErdaFragments() != null ? req.solErdaFragments() : 0;
-        long solErdaMesoValue = fragments * user.getSolErdaFragmentPrice();
+        long pricePerFragment = user.getSolErdaFragmentPrice() != null ? user.getSolErdaFragmentPrice() : 0L;
+        long solErdaMesoValue = (long) fragments * pricePerFragment;
         long totalIncome = req.income() + solErdaMesoValue;
         LocalDate weekStart = WeekUtil.getWeekStart(req.sessionDate());
 

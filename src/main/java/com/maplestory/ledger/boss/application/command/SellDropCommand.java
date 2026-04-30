@@ -7,9 +7,10 @@ import java.time.LocalDate;
 public record SellDropCommand(
         Long dropRecordId,
         Long saleAmount,
-        LocalDate saleDate
+        LocalDate saleDate,
+        Boolean isPcCafe
 ) {
     public static SellDropCommand from(Long dropRecordId, SellDropRequest req) {
-        return new SellDropCommand(dropRecordId, req.saleAmount(), req.saleDate());
+        return new SellDropCommand(dropRecordId, req.saleAmount(), req.saleDate(), req.isPcCafe());
     }
 }

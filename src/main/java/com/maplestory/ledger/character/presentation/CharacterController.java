@@ -22,6 +22,14 @@ public class CharacterController {
 
     private final CharacterService characterService;
 
+    @PostMapping("/bulk")
+    public ResponseEntity<List<CharacterResponse>> createCharacters(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody List<@Valid CharacterRequest> requests) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(characterService.createCharacters(userDetails.getUserId(), requests));
+    }
+
     @PostMapping
     public ResponseEntity<CharacterResponse> createCharacter(
             @AuthenticationPrincipal CustomUserDetails userDetails,

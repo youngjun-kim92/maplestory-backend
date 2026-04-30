@@ -7,5 +7,6 @@ import java.time.LocalDate;
 
 public record SellDropRequest(
         @NotNull @Positive Long saleAmount,
-        @NotNull LocalDate saleDate
+        @NotNull LocalDate saleDate,
+        Boolean isPcCafe
 ) {}
