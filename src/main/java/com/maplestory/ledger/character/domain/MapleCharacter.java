@@ -72,4 +72,8 @@ public class MapleCharacter {
     public void addSolErdaFragments(int count) {
         this.solErdaFragments = (this.solErdaFragments != null ? this.solErdaFragments : 0) + count;
     }
+
+    public void unsetMain() {
+        this.isMain = false;
+    }
 }

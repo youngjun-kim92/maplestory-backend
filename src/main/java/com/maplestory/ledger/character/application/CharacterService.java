@@ -30,6 +30,10 @@ public class CharacterService {
 
     @Transactional
     public CharacterResponse createCharacter(Long userId, CharacterRequest req) {
+        if (Boolean.TRUE.equals(req.isMain())) {
+            characterRepository.findByUserIdAndIsMainTrue(userId)
+                    .ifPresent(prev -> { prev.unsetMain(); characterRepository.save(prev); });
+        }
         User user = userRepository.getReferenceById(userId);
         MapleCharacter character = MapleCharacter.create(
                 user, req.name(), req.jobClass(), req.level(), req.isMain(), req.initialInvestment()
@@ -47,6 +51,10 @@ public class CharacterService {
     public CharacterResponse updateCharacter(Long userId, Long characterId, CharacterRequest req) {
         MapleCharacter character = characterRepository.findByIdAndUserId(characterId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("캐릭터를 찾을 수 없습니다."));
+        if (Boolean.TRUE.equals(req.isMain()) && !Boolean.TRUE.equals(character.getIsMain())) {
+            characterRepository.findByUserIdAndIsMainTrue(userId)
+                    .ifPresent(prev -> { prev.unsetMain(); characterRepository.save(prev); });
+        }
         character.update(req.name(), req.jobClass(), req.level(), req.isMain(), req.initialInvestment(), req.solErdaFragments());
         return CharacterResponse.from(characterRepository.save(character));
     }
