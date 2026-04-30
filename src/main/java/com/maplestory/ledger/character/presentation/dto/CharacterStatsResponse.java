@@ -17,7 +17,7 @@ public record CharacterStatsResponse(
                 ((Number) row[0]).longValue(),
                 (String) row[1],
                 (String) row[2],
-                row[3] != null && ((Number) row[3]).intValue() == 1,
+                Boolean.TRUE.equals(row[3]) || (row[3] instanceof Number n && n.intValue() == 1),
                 income,
                 expense,
                 income - expense,

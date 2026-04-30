@@ -2,6 +2,7 @@ package com.maplestory.ledger.hunting.infrastructure;
 
 import com.maplestory.ledger.hunting.domain.HuntingSession;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -26,4 +27,14 @@ public interface HuntingSessionRepository extends JpaRepository<HuntingSession, 
             ORDER BY avgIncomePerHour DESC
             """, nativeQuery = true)
     List<Object[]> findHuntingStatsByMap(@Param("userId") Long userId);
+
+    @Modifying
+    @Query("UPDATE HuntingSession s SET s.ledgerEntry = null WHERE s.ledgerEntry.id = :entryId")
+    void clearLedgerEntryRef(@Param("entryId") Long entryId);
+
+    @Modifying
+    @Query("UPDATE HuntingSession s SET s.character = null WHERE s.character.id = :characterId")
+    void clearCharacterRef(@Param("characterId") Long characterId);
+
+    void deleteByUserId(Long userId);
 }

@@ -8,11 +8,13 @@ public record WeekSummaryResponse(
         LocalDate weekStart,
         Long totalIncome,
         Long totalExpense,
-        Long entryCount
+        Long entryCount,
+        Long totalSolErdaFragments
 ) {
     public static WeekSummaryResponse from(WeeklySummaryProjection p) {
         return new WeekSummaryResponse(
-                p.getWeekStart(), p.getTotalIncome(), p.getTotalExpense(), p.getEntryCount()
+                p.getWeekStart(), p.getTotalIncome(), p.getTotalExpense(), p.getEntryCount(),
+                p.getTotalSolErdaFragments() != null ? p.getTotalSolErdaFragments() : 0L
         );
     }
 }

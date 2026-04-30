@@ -10,4 +10,5 @@ public interface GoalRepository extends JpaRepository<Goal, Long> {
     List<Goal> findByUserIdOrderByCreatedAtDesc(Long userId);
     List<Goal> findByUserIdAndIsAchievedFalse(Long userId);
     Optional<Goal> findByIdAndUserId(Long id, Long userId);
+    void deleteByUserId(Long userId);
 }

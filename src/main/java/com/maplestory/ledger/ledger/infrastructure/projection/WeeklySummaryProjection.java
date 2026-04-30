@@ -7,4 +7,5 @@ public interface WeeklySummaryProjection {
     Long getTotalIncome();
     Long getTotalExpense();
     Long getEntryCount();
+    Long getTotalSolErdaFragments();
 }

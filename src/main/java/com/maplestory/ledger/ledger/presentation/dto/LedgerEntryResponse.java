@@ -17,6 +17,7 @@ public record LedgerEntryResponse(
         LocalDate weekStart,
         Long characterId,
         String characterName,
+        Integer solErdaFragments,
         LocalDateTime createdAt
 ) {
     public static LedgerEntryResponse from(LedgerEntry e) {
@@ -30,6 +31,7 @@ public record LedgerEntryResponse(
                 e.getWeekStart(),
                 e.getCharacter() != null ? e.getCharacter().getId() : null,
                 e.getCharacter() != null ? e.getCharacter().getName() : null,
+                e.getSolErdaFragments() != null ? e.getSolErdaFragments() : 0,
                 e.getCreatedAt()
         );
     }

@@ -51,11 +51,17 @@ public class HuntingService {
                         LedgerEntry.EntryType.income, LedgerEntry.EntryCategory.hunting,
                         totalIncome,
                         req.mapName() + " " + req.durationMinutes() + "분 사냥",
-                        req.sessionDate(), weekStart)
+                        req.sessionDate(), weekStart, fragments)
         );
 
         user.updateMesoBalance(user.getInventoryMeso() + totalIncome, user.getStorageMeso());
         userRepository.save(user);
+
+        // 캐릭터의 솔 에르다 조각 수 누적
+        if (character != null && fragments > 0) {
+            character.addSolErdaFragments(fragments);
+            characterRepository.save(character);
+        }
 
         HuntingSession session = huntingSessionRepository.save(
                 HuntingSession.create(user, character, ledgerEntry,

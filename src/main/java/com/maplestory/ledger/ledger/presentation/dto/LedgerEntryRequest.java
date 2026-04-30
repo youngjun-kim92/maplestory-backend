@@ -13,5 +13,6 @@ public record LedgerEntryRequest(
         @NotNull @Min(value = 1, message = "금액은 1 이상이어야 합니다.") Long amount,
         String description,
         @NotNull(message = "날짜를 입력해주세요.") LocalDate entryDate,
-        Long characterId
+        Long characterId,
+        Integer solErdaFragments
 ) {}

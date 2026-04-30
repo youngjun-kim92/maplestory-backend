@@ -3,6 +3,7 @@ package com.maplestory.ledger.boss.infrastructure;
 import com.maplestory.ledger.boss.domain.BossKill;
 import com.maplestory.ledger.boss.infrastructure.projection.BossStatsProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -37,4 +38,14 @@ public interface BossKillRepository extends JpaRepository<BossKill, Long> {
             GROUP BY week_start
             """, nativeQuery = true)
     List<Object[]> findWeeklyIncomeByCharacter(@Param("userId") Long userId, @Param("characterId") Long characterId);
+
+    @Modifying
+    @Query("UPDATE BossKill k SET k.ledgerEntry = null WHERE k.ledgerEntry.id = :entryId")
+    void clearLedgerEntryRef(@Param("entryId") Long entryId);
+
+    @Modifying
+    @Query("UPDATE BossKill k SET k.character = null WHERE k.character.id = :characterId")
+    void clearCharacterRef(@Param("characterId") Long characterId);
+
+    void deleteByUserId(Long userId);
 }

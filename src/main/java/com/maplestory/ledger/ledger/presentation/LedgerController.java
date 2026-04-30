@@ -3,10 +3,12 @@ package com.maplestory.ledger.ledger.presentation;
 import com.maplestory.ledger.common.security.CustomUserDetails;
 import com.maplestory.ledger.ledger.application.LedgerService;
 import com.maplestory.ledger.ledger.application.command.AddLedgerEntryCommand;
+import com.maplestory.ledger.ledger.application.command.UpdateLedgerEntryCommand;
 import com.maplestory.ledger.ledger.presentation.dto.AddEntryResponse;
 import com.maplestory.ledger.ledger.presentation.dto.CategoryStatResponse;
 import com.maplestory.ledger.ledger.presentation.dto.IncomeSourceTrendResponse;
 import com.maplestory.ledger.ledger.presentation.dto.LedgerEntryRequest;
+import com.maplestory.ledger.ledger.presentation.dto.LedgerEntryResponse;
 import com.maplestory.ledger.ledger.presentation.dto.WeekSummaryResponse;
 import com.maplestory.ledger.ledger.presentation.dto.WeeklyLedgerResponse;
 import jakarta.validation.Valid;
@@ -40,6 +42,15 @@ public class LedgerController {
             @Valid @RequestBody LedgerEntryRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ledgerService.addEntry(userDetails.getUserId(), AddLedgerEntryCommand.from(req)));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<LedgerEntryResponse> updateEntry(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long id,
+            @Valid @RequestBody LedgerEntryRequest req) {
+        return ResponseEntity.ok(ledgerService.updateEntry(
+                userDetails.getUserId(), id, UpdateLedgerEntryCommand.from(req)));
     }
 
     @DeleteMapping("/{id}")

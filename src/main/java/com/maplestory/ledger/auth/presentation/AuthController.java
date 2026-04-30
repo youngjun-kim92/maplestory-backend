@@ -54,4 +54,10 @@ public class AuthController {
                 authService.updateMesoBalance(userDetails.getUserId(), req.inventoryMeso(), req.storageMeso())
         );
     }
+
+    @DeleteMapping("/reset")
+    public ResponseEntity<Void> resetAllData(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        authService.resetAllData(userDetails.getUserId());
+        return ResponseEntity.noContent().build();
+    }
 }

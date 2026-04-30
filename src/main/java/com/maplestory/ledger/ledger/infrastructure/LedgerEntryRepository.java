@@ -5,6 +5,7 @@ import com.maplestory.ledger.ledger.infrastructure.projection.WeeklyNetProjectio
 import com.maplestory.ledger.ledger.infrastructure.projection.WeeklySummaryProjection;
 import com.maplestory.ledger.stats.infrastructure.projection.UserWeeklyAvgProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -18,11 +19,18 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, Long> 
 
     Optional<LedgerEntry> findByIdAndUserId(Long id, Long userId);
 
+    void deleteByUserId(Long userId);
+
+    @Modifying
+    @Query("UPDATE LedgerEntry e SET e.character = null WHERE e.character.id = :characterId")
+    void clearCharacterRef(@Param("characterId") Long characterId);
+
     @Query(value = """
             SELECT week_start as weekStart,
                    SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as totalIncome,
                    SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as totalExpense,
-                   COUNT(*) as entryCount
+                   COUNT(*) as entryCount,
+                   COALESCE(SUM(sol_erda_fragments), 0) as totalSolErdaFragments
             FROM ledger_entries
             WHERE user_id = :userId
             GROUP BY week_start

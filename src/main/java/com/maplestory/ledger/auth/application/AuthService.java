@@ -6,10 +6,16 @@ import com.maplestory.ledger.auth.presentation.dto.AuthResponse;
 import com.maplestory.ledger.auth.presentation.dto.LoginRequest;
 import com.maplestory.ledger.auth.presentation.dto.RegisterRequest;
 import com.maplestory.ledger.auth.presentation.dto.UserResponse;
+import com.maplestory.ledger.boss.infrastructure.BossDropRecordRepository;
+import com.maplestory.ledger.boss.infrastructure.BossKillRepository;
+import com.maplestory.ledger.character.infrastructure.CharacterRepository;
 import com.maplestory.ledger.common.exception.DuplicateNicknameException;
 import com.maplestory.ledger.common.exception.InvalidCredentialsException;
 import com.maplestory.ledger.common.exception.ResourceNotFoundException;
 import com.maplestory.ledger.common.security.JwtTokenProvider;
+import com.maplestory.ledger.goal.infrastructure.GoalRepository;
+import com.maplestory.ledger.hunting.infrastructure.HuntingSessionRepository;
+import com.maplestory.ledger.ledger.infrastructure.LedgerEntryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -22,6 +28,12 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final BossDropRecordRepository bossDropRecordRepository;
+    private final BossKillRepository bossKillRepository;
+    private final HuntingSessionRepository huntingSessionRepository;
+    private final LedgerEntryRepository ledgerEntryRepository;
+    private final GoalRepository goalRepository;
+    private final CharacterRepository characterRepository;
 
     @Transactional
     public AuthResponse register(RegisterRequest req) {
@@ -65,5 +77,19 @@ public class AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
         user.updateMesoBalance(inventoryMeso, storageMeso);
         return UserResponse.from(user);
+    }
+
+    @Transactional
+    public void resetAllData(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
+        bossDropRecordRepository.deleteByUserId(userId);
+        bossKillRepository.deleteByUserId(userId);
+        huntingSessionRepository.deleteByUserId(userId);
+        ledgerEntryRepository.deleteByUserId(userId);
+        goalRepository.deleteByUserId(userId);
+        characterRepository.deleteByUserId(userId);
+        user.updateMesoBalance(0L, 0L);
+        user.updateSolErdaPrice(0L);
     }
 }

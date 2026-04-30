@@ -40,6 +40,9 @@ public class MapleCharacter {
     @Column(name = "initial_investment")
     private Long initialInvestment = 0L;
 
+    @Column(name = "sol_erda_fragments")
+    private Integer solErdaFragments = 0;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -53,14 +56,20 @@ public class MapleCharacter {
         c.level = level != null ? level : 1;
         c.isMain = isMain != null ? isMain : false;
         c.initialInvestment = initialInvestment != null ? initialInvestment : 0L;
+        c.solErdaFragments = 0;
         return c;
     }
 
-    public void update(String name, String jobClass, Integer level, Boolean isMain, Long initialInvestment) {
+    public void update(String name, String jobClass, Integer level, Boolean isMain, Long initialInvestment, Integer solErdaFragments) {
         if (name != null) this.name = name;
         if (jobClass != null) this.jobClass = jobClass;
         if (level != null) this.level = level;
         if (isMain != null) this.isMain = isMain;
         if (initialInvestment != null) this.initialInvestment = initialInvestment;
+        if (solErdaFragments != null) this.solErdaFragments = solErdaFragments;
+    }
+
+    public void addSolErdaFragments(int count) {
+        this.solErdaFragments = (this.solErdaFragments != null ? this.solErdaFragments : 0) + count;
     }
 }

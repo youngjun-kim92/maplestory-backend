@@ -3,13 +3,18 @@ package com.maplestory.ledger.ledger.application;
 import com.maplestory.ledger.auth.domain.User;
 import com.maplestory.ledger.auth.infrastructure.UserRepository;
 import com.maplestory.ledger.character.domain.MapleCharacter;
+import com.maplestory.ledger.boss.infrastructure.BossDropRecordRepository;
+import com.maplestory.ledger.boss.infrastructure.BossKillRepository;
 import com.maplestory.ledger.character.infrastructure.CharacterRepository;
 import com.maplestory.ledger.common.exception.ResourceNotFoundException;
 import com.maplestory.ledger.common.util.WeekUtil;
 import com.maplestory.ledger.goal.application.GoalService;
 import com.maplestory.ledger.goal.application.GoalWarning;
+import com.maplestory.ledger.hunting.infrastructure.HuntingSessionRepository;
 import com.maplestory.ledger.ledger.application.command.AddLedgerEntryCommand;
+import com.maplestory.ledger.ledger.application.command.UpdateLedgerEntryCommand;
 import com.maplestory.ledger.ledger.domain.LedgerEntry;
+import com.maplestory.ledger.ledger.domain.LedgerEntry.EntryCategory;
 import com.maplestory.ledger.ledger.domain.LedgerEntry.EntryType;
 import com.maplestory.ledger.ledger.infrastructure.LedgerEntryRepository;
 import com.maplestory.ledger.ledger.presentation.dto.AddEntryResponse;
@@ -33,6 +38,9 @@ public class LedgerService {
     private final UserRepository userRepository;
     private final CharacterRepository characterRepository;
     private final GoalService goalService;
+    private final BossKillRepository bossKillRepository;
+    private final BossDropRecordRepository bossDropRecordRepository;
+    private final HuntingSessionRepository huntingSessionRepository;
 
     @Transactional(readOnly = true)
     public WeeklyLedgerResponse getWeeklyLedger(Long userId, LocalDate weekStartParam) {
@@ -61,9 +69,10 @@ public class LedgerService {
         MapleCharacter character = resolveCharacter(userId, cmd.characterId());
         LocalDate weekStart = WeekUtil.getWeekStart(cmd.entryDate());
 
+        int fragments = cmd.solErdaFragments() != null ? cmd.solErdaFragments() : 0;
         LedgerEntry entry = ledgerEntryRepository.save(
                 LedgerEntry.create(user, character, cmd.type(), cmd.category(),
-                        cmd.amount(), cmd.description(), cmd.entryDate(), weekStart)
+                        cmd.amount(), cmd.description(), cmd.entryDate(), weekStart, fragments)
         );
 
         // 수익/지출 발생 시 인벤토리 메소 즉시 반영
@@ -71,6 +80,12 @@ public class LedgerService {
         long newInventory = Math.max(0, user.getInventoryMeso() + delta);
         user.updateMesoBalance(newInventory, user.getStorageMeso());
         userRepository.save(user);
+
+        // 사냥 수익 기록 시 캐릭터의 솔 에르다 조각 수 누적
+        if (cmd.category() == EntryCategory.hunting && character != null && fragments > 0) {
+            character.addSolErdaFragments(fragments);
+            characterRepository.save(character);
+        }
 
         List<GoalWarning> warnings = List.of();
         if (cmd.type() == EntryType.expense) {
@@ -80,17 +95,60 @@ public class LedgerService {
     }
 
     @Transactional
+    public LedgerEntryResponse updateEntry(Long userId, Long entryId, UpdateLedgerEntryCommand cmd) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
+        LedgerEntry entry = ledgerEntryRepository.findByIdAndUserId(entryId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("항목을 찾을 수 없습니다."));
+
+        // 메소 변화량: 기존 효과 역산 후 새 효과 적용
+        long oldEffect = entry.getType() == EntryType.income ? entry.getAmount() : -entry.getAmount();
+        long newEffect = cmd.type() == EntryType.income ? cmd.amount() : -cmd.amount();
+        long newInventory = Math.max(0, user.getInventoryMeso() - oldEffect + newEffect);
+        user.updateMesoBalance(newInventory, user.getStorageMeso());
+        userRepository.save(user);
+
+        // 솔 에르다 조각 변화량 캐릭터에 반영
+        int oldFragments = entry.getSolErdaFragments() != null ? entry.getSolErdaFragments() : 0;
+        int newFragments = cmd.solErdaFragments() != null ? cmd.solErdaFragments() : 0;
+        if (entry.getCharacter() != null && entry.getCategory() == EntryCategory.hunting) {
+            int fragmentDelta = newFragments - oldFragments;
+            if (fragmentDelta != 0) {
+                entry.getCharacter().addSolErdaFragments(fragmentDelta);
+                characterRepository.save(entry.getCharacter());
+            }
+        }
+
+        LocalDate weekStart = WeekUtil.getWeekStart(cmd.entryDate());
+        entry.update(cmd.type(), cmd.category(), cmd.amount(),
+                cmd.description(), cmd.entryDate(), weekStart, newFragments);
+        return LedgerEntryResponse.from(ledgerEntryRepository.save(entry));
+    }
+
+    @Transactional
     public void deleteEntry(Long userId, Long entryId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
         LedgerEntry entry = ledgerEntryRepository.findByIdAndUserId(entryId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("항목을 찾을 수 없습니다."));
 
+        // FK 참조 해제 (BossKill, HuntingSession, BossDropRecord → LedgerEntry)
+        bossKillRepository.clearLedgerEntryRef(entryId);
+        huntingSessionRepository.clearLedgerEntryRef(entryId);
+        bossDropRecordRepository.clearLedgerEntryRef(entryId);
+
         // 삭제 시 메소 역산
         long delta = entry.getType() == EntryType.income ? -entry.getAmount() : entry.getAmount();
         long newInventory = Math.max(0, user.getInventoryMeso() + delta);
         user.updateMesoBalance(newInventory, user.getStorageMeso());
         userRepository.save(user);
+
+        // 사냥 기록 삭제 시 캐릭터의 솔 에르다 조각 수 차감
+        int fragments = entry.getSolErdaFragments() != null ? entry.getSolErdaFragments() : 0;
+        if (entry.getCategory() == EntryCategory.hunting && entry.getCharacter() != null && fragments > 0) {
+            entry.getCharacter().addSolErdaFragments(-fragments);
+            characterRepository.save(entry.getCharacter());
+        }
 
         ledgerEntryRepository.delete(entry);
     }

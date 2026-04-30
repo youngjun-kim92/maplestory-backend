@@ -6,7 +6,7 @@ import com.maplestory.ledger.ledger.presentation.dto.LedgerEntryRequest;
 
 import java.time.LocalDate;
 
-public record AddLedgerEntryCommand(
+public record UpdateLedgerEntryCommand(
         EntryType type,
         EntryCategory category,
         Long amount,
@@ -15,8 +15,8 @@ public record AddLedgerEntryCommand(
         Long characterId,
         Integer solErdaFragments
 ) {
-    public static AddLedgerEntryCommand from(LedgerEntryRequest req) {
-        return new AddLedgerEntryCommand(
+    public static UpdateLedgerEntryCommand from(LedgerEntryRequest req) {
+        return new UpdateLedgerEntryCommand(
                 req.type(), req.category(), req.amount(),
                 req.description(), req.entryDate(), req.characterId(),
                 req.solErdaFragments()

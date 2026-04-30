@@ -2,6 +2,7 @@ package com.maplestory.ledger.boss.infrastructure;
 
 import com.maplestory.ledger.boss.domain.BossDropRecord;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -18,4 +19,10 @@ public interface BossDropRecordRepository extends JpaRepository<BossDropRecord, 
     List<BossDropRecord> findByBossKillId(@Param("bossKillId") Long bossKillId);
 
     Optional<BossDropRecord> findByIdAndUserId(Long id, Long userId);
+
+    @Modifying
+    @Query("UPDATE BossDropRecord r SET r.ledgerEntry = null WHERE r.ledgerEntry.id = :entryId")
+    void clearLedgerEntryRef(@Param("entryId") Long entryId);
+
+    void deleteByUserId(Long userId);
 }

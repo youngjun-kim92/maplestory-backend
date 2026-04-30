@@ -7,5 +7,6 @@ public record CharacterRequest(
         String jobClass,
         Integer level,
         Boolean isMain,
-        Long initialInvestment
+        Long initialInvestment,
+        Integer solErdaFragments
 ) {}

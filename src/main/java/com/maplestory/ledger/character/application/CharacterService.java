@@ -2,6 +2,7 @@ package com.maplestory.ledger.character.application;
 
 import com.maplestory.ledger.auth.domain.User;
 import com.maplestory.ledger.auth.infrastructure.UserRepository;
+import com.maplestory.ledger.boss.infrastructure.BossKillRepository;
 import com.maplestory.ledger.character.domain.MapleCharacter;
 import com.maplestory.ledger.character.infrastructure.CharacterRepository;
 import com.maplestory.ledger.character.presentation.dto.CharacterRequest;
@@ -9,6 +10,7 @@ import com.maplestory.ledger.character.presentation.dto.CharacterROIResponse;
 import com.maplestory.ledger.character.presentation.dto.CharacterResponse;
 import com.maplestory.ledger.character.presentation.dto.CharacterStatsResponse;
 import com.maplestory.ledger.common.exception.ResourceNotFoundException;
+import com.maplestory.ledger.hunting.infrastructure.HuntingSessionRepository;
 import com.maplestory.ledger.ledger.infrastructure.LedgerEntryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,8 @@ public class CharacterService {
     private final CharacterRepository characterRepository;
     private final UserRepository userRepository;
     private final LedgerEntryRepository ledgerEntryRepository;
+    private final BossKillRepository bossKillRepository;
+    private final HuntingSessionRepository huntingSessionRepository;
 
     @Transactional
     public CharacterResponse createCharacter(Long userId, CharacterRequest req) {
@@ -43,7 +47,7 @@ public class CharacterService {
     public CharacterResponse updateCharacter(Long userId, Long characterId, CharacterRequest req) {
         MapleCharacter character = characterRepository.findByIdAndUserId(characterId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("캐릭터를 찾을 수 없습니다."));
-        character.update(req.name(), req.jobClass(), req.level(), req.isMain(), req.initialInvestment());
+        character.update(req.name(), req.jobClass(), req.level(), req.isMain(), req.initialInvestment(), req.solErdaFragments());
         return CharacterResponse.from(characterRepository.save(character));
     }
 
@@ -51,6 +55,9 @@ public class CharacterService {
     public void deleteCharacter(Long userId, Long characterId) {
         MapleCharacter character = characterRepository.findByIdAndUserId(characterId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("캐릭터를 찾을 수 없습니다."));
+        ledgerEntryRepository.clearCharacterRef(characterId);
+        bossKillRepository.clearCharacterRef(characterId);
+        huntingSessionRepository.clearCharacterRef(characterId);
         characterRepository.delete(character);
     }
 

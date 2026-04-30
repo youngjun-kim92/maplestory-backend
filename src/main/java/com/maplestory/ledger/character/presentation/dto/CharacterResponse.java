@@ -11,12 +11,15 @@ public record CharacterResponse(
         Integer level,
         Boolean isMain,
         Long initialInvestment,
+        Integer solErdaFragments,
         LocalDateTime createdAt
 ) {
     public static CharacterResponse from(MapleCharacter c) {
         return new CharacterResponse(
                 c.getId(), c.getName(), c.getJobClass(),
-                c.getLevel(), c.getIsMain(), c.getInitialInvestment(), c.getCreatedAt()
+                c.getLevel(), c.getIsMain(), c.getInitialInvestment(),
+                c.getSolErdaFragments() != null ? c.getSolErdaFragments() : 0,
+                c.getCreatedAt()
         );
     }
 }

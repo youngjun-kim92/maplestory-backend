@@ -55,6 +55,9 @@ public class LedgerEntry {
     @Column(name = "week_start", nullable = false)
     private LocalDate weekStart;
 
+    @Column(name = "sol_erda_fragments")
+    private Integer solErdaFragments = 0;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -63,6 +66,14 @@ public class LedgerEntry {
                                      EntryType type, EntryCategory category,
                                      Long amount, String description,
                                      LocalDate entryDate, LocalDate weekStart) {
+        return create(user, character, type, category, amount, description, entryDate, weekStart, null);
+    }
+
+    public static LedgerEntry create(User user, MapleCharacter character,
+                                     EntryType type, EntryCategory category,
+                                     Long amount, String description,
+                                     LocalDate entryDate, LocalDate weekStart,
+                                     Integer solErdaFragments) {
         LedgerEntry e = new LedgerEntry();
         e.user = user;
         e.character = character;
@@ -72,7 +83,20 @@ public class LedgerEntry {
         e.description = description;
         e.entryDate = entryDate;
         e.weekStart = weekStart;
+        e.solErdaFragments = solErdaFragments != null ? solErdaFragments : 0;
         return e;
+    }
+
+    public void update(EntryType type, EntryCategory category, Long amount,
+                       String description, LocalDate entryDate, LocalDate weekStart,
+                       Integer solErdaFragments) {
+        this.type = type;
+        this.category = category;
+        this.amount = amount;
+        this.description = description;
+        this.entryDate = entryDate;
+        this.weekStart = weekStart;
+        this.solErdaFragments = solErdaFragments != null ? solErdaFragments : 0;
     }
 
     public enum EntryType {
