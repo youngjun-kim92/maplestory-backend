@@ -36,7 +36,7 @@ public class CharacterService {
         }
         User user = userRepository.getReferenceById(userId);
         MapleCharacter character = MapleCharacter.create(
-                user, req.name(), req.jobClass(), req.level(), req.isMain(), req.initialInvestment(), req.mvpGrade()
+                user, req.name(), req.jobClass(), req.level(), req.isMain(), req.initialInvestment()
         );
         return CharacterResponse.from(characterRepository.save(character));
     }
@@ -60,7 +60,7 @@ public class CharacterService {
             characterRepository.findByUserIdAndIsMainTrue(userId)
                     .ifPresent(prev -> { prev.unsetMain(); characterRepository.save(prev); });
         }
-        character.update(req.name(), req.jobClass(), req.level(), req.isMain(), req.initialInvestment(), req.solErdaFragments(), req.mvpGrade());
+        character.update(req.name(), req.jobClass(), req.level(), req.isMain(), req.initialInvestment(), req.solErdaFragments());
         return CharacterResponse.from(characterRepository.save(character));
     }
 

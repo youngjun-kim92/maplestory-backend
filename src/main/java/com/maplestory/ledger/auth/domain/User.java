@@ -35,6 +35,10 @@ public class User {
     @Column(name = "storage_meso")
     private Long storageMeso = 0L;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "mvp_grade", length = 20)
+    private MvpGrade mvpGrade = MvpGrade.NORMAL;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -43,6 +47,17 @@ public class User {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    public enum MvpGrade {
+        NORMAL, BRONZE, SILVER, GOLD, DIAMOND, RED, BLACK;
+
+        public double auctionFeeRate() {
+            return switch (this) {
+                case SILVER, GOLD, DIAMOND, RED, BLACK -> 0.03;
+                default -> 0.05;
+            };
+        }
+    }
+
     public static User create(String nickname, String passwordHash) {
         User user = new User();
         user.nickname = nickname;
@@ -50,7 +65,12 @@ public class User {
         user.solErdaFragmentPrice = 0L;
         user.inventoryMeso = 0L;
         user.storageMeso = 0L;
+        user.mvpGrade = MvpGrade.NORMAL;
         return user;
+    }
+
+    public void updateMvpGrade(MvpGrade grade) {
+        this.mvpGrade = grade != null ? grade : MvpGrade.NORMAL;
     }
 
     public void updateSolErdaPrice(Long price) {

@@ -163,7 +163,7 @@ public class BossService {
 
         LocalDate weekStart = WeekUtil.getWeekStart(cmd.saleDate());
 
-        double feeRate = calcAuctionFeeRate(dropRecord.getCharacter(), cmd.isPcCafe());
+        double feeRate = calcAuctionFeeRate(user, cmd.isPcCafe());
         long netAmount = Math.round(cmd.saleAmount() * (1.0 - feeRate));
         int feePercent = (int) Math.round(feeRate * 100);
 
@@ -206,9 +206,9 @@ public class BossService {
                 .orElseThrow(() -> new ResourceNotFoundException("캐릭터를 찾을 수 없습니다."));
     }
 
-    private double calcAuctionFeeRate(MapleCharacter character, Boolean isPcCafe) {
+    private double calcAuctionFeeRate(User user, Boolean isPcCafe) {
         if (Boolean.TRUE.equals(isPcCafe)) return 0.03;
-        if (character == null || character.getMvpGrade() == null) return 0.05;
-        return character.getMvpGrade().auctionFeeRate();
+        if (user == null || user.getMvpGrade() == null) return 0.05;
+        return user.getMvpGrade().auctionFeeRate();
     }
 }

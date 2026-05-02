@@ -1,6 +1,5 @@
 package com.maplestory.ledger.character.presentation.dto;
 
-import com.maplestory.ledger.character.domain.MapleCharacter;
 import jakarta.validation.constraints.NotBlank;
 
 public record CharacterRequest(
@@ -9,6 +8,5 @@ public record CharacterRequest(
         Integer level,
         Boolean isMain,
         Long initialInvestment,
-        Integer solErdaFragments,
-        MapleCharacter.MvpGrade mvpGrade
+        Integer solErdaFragments
 ) {}

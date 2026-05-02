@@ -67,6 +67,14 @@ public class AuthService {
     }
 
     @Transactional
+    public UserResponse updateMvpGrade(Long userId, User.MvpGrade grade) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
+        user.updateMvpGrade(grade);
+        return UserResponse.from(user);
+    }
+
+    @Transactional
     public void updateSolErdaPrice(Long userId, Long price) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));

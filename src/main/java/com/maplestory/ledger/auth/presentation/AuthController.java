@@ -1,6 +1,7 @@
 package com.maplestory.ledger.auth.presentation;
 
 import com.maplestory.ledger.auth.application.AuthService;
+import com.maplestory.ledger.auth.domain.User;
 import com.maplestory.ledger.auth.presentation.dto.AuthResponse;
 import com.maplestory.ledger.auth.presentation.dto.LoginRequest;
 import com.maplestory.ledger.auth.presentation.dto.MesoBalanceRequest;
@@ -53,6 +54,13 @@ public class AuthController {
         return ResponseEntity.ok(
                 authService.updateMesoBalance(userDetails.getUserId(), req.inventoryMeso(), req.storageMeso())
         );
+    }
+
+    @PutMapping("/mvp-grade")
+    public ResponseEntity<UserResponse> updateMvpGrade(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam User.MvpGrade grade) {
+        return ResponseEntity.ok(authService.updateMvpGrade(userDetails.getUserId(), grade));
     }
 
     @DeleteMapping("/reset")

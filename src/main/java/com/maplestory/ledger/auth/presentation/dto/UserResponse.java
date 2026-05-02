@@ -11,6 +11,7 @@ public record UserResponse(
         Long inventoryMeso,
         Long storageMeso,
         Long totalMeso,
+        String mvpGrade,
         LocalDateTime createdAt
 ) {
     public static UserResponse from(User user) {
@@ -21,6 +22,7 @@ public record UserResponse(
                 user.getInventoryMeso(),
                 user.getStorageMeso(),
                 user.getTotalMeso(),
+                user.getMvpGrade() != null ? user.getMvpGrade().name() : "NORMAL",
                 user.getCreatedAt()
         );
     }
