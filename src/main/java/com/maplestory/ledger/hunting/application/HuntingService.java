@@ -51,7 +51,7 @@ public class HuntingService {
                 LedgerEntry.create(user, character,
                         LedgerEntry.EntryType.income, LedgerEntry.EntryCategory.hunting,
                         totalIncome,
-                        req.mapName() + " " + req.durationMinutes() + "분 사냥",
+                        "사냥",
                         req.sessionDate(), weekStart, fragments)
         );
 
@@ -66,7 +66,7 @@ public class HuntingService {
 
         HuntingSession session = huntingSessionRepository.save(
                 HuntingSession.create(user, character, ledgerEntry,
-                        req.mapName(), req.durationMinutes(), req.income(),
+                        null, null, req.income(),
                         fragments, solErdaMesoValue, req.sessionDate(), weekStart)
         );
         return HuntingSessionResponse.from(session);

@@ -7,8 +7,6 @@ import java.time.LocalDateTime;
 
 public record HuntingSessionResponse(
         Long id,
-        String mapName,
-        Integer durationMinutes,
         Long income,
         Integer solErdaFragments,
         Long solErdaMesoValue,
@@ -22,8 +20,6 @@ public record HuntingSessionResponse(
     public static HuntingSessionResponse from(HuntingSession s) {
         return new HuntingSessionResponse(
                 s.getId(),
-                s.getMapName(),
-                s.getDurationMinutes(),
                 s.getIncome(),
                 s.getSolErdaFragments(),
                 s.getSolErdaMesoValue(),

@@ -32,6 +32,13 @@ Base URL: `http://localhost:8080`
 
 ### PUT /api/auth/sol-erda-price?price=150000 — 솔 에르다 조각 단가 설정 🔒
 
+### PUT /api/auth/mvp-grade?grade=SILVER — MVP 등급 설정 🔒
+```
+grade: NORMAL | BRONZE | SILVER | GOLD | DIAMOND | RED | BLACK
+Response 200 — UserResponse (mvpGrade 포함)
+경매장 수수료: 실버 이상 3%, 일반/브론즈 5%, PC방 3% (등급 무관)
+```
+
 ### DELETE /api/auth/reset — 전체 기록 초기화 🔒
 ```
 Response 204 No Content
@@ -169,17 +176,15 @@ Response 204 No Content
 ```json
 // Request Body
 {
-  "mapName": "아르카나 강변",
-  "durationMinutes": 60,
   "income": 80000000,
   "solErdaFragments": 30,
   "sessionDate": "2026-04-27",
   "characterId": 1
 }
+// mapName, durationMinutes 제거 — 얼마 벌었고 조각 몇 개인지만 기록
 ```
 
 ### GET /api/hunting/sessions?week= — 주간 사냥 세션 목록 🔒
-### GET /api/hunting/stats — 사냥터별 수익 통계 🔒
 
 ---
 

@@ -36,10 +36,10 @@ public class HuntingSession {
     @JoinColumn(name = "ledger_entry_id")
     private LedgerEntry ledgerEntry;
 
-    @Column(name = "map_name", nullable = false, length = 200)
+    @Column(name = "map_name", length = 200)
     private String mapName;
 
-    @Column(name = "duration_minutes", nullable = false)
+    @Column(name = "duration_minutes")
     private Integer durationMinutes;
 
     @Column(nullable = false)
