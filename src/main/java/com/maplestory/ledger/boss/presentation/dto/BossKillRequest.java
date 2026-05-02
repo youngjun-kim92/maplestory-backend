@@ -13,7 +13,7 @@ public record BossKillRequest(
         @NotBlank(message = "보스 이름을 입력해주세요.") String bossName,
         @NotBlank(message = "난이도를 선택해주세요.") String difficulty,
         @NotNull(message = "날짜를 입력해주세요.") LocalDate killDate,
-        Long characterId,
+        @NotNull(message = "캐릭터를 선택해주세요.") Long characterId,
         @Min(1) @Max(6) Integer partySize,
         List<InlineExpense> expenses
 ) {
