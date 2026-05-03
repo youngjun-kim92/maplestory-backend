@@ -76,6 +76,23 @@ public class BossService {
         MapleCharacter character = resolveCharacter(userId, cmd.characterId());
         LocalDate weekStart = WeekUtil.getWeekStart(cmd.killDate());
 
+        // 같은 캐릭터가 이번 주에 동일 보스를 이미 처치한 경우 차단
+        if (character != null && bossKillRepository.existsByCharacterIdAndBossNameAndDifficultyAndWeekStart(
+                character.getId(), cmd.bossName(), cmd.difficulty(), weekStart)) {
+            throw new IllegalStateException(
+                    character.getName() + "은(는) 이번 주에 이미 " + cmd.bossName() + " " + cmd.difficulty() + "을(를) 처치했습니다.");
+        }
+
+        // 주간 보스 12개 제한
+        if (character != null && bossMaster.getResetType() != null
+                && bossMaster.getResetType().equals("weekly")) {
+            int weeklyCount = bossKillRepository.countWeeklyBossesByCharacter(character.getId(), weekStart);
+            if (weeklyCount >= 12) {
+                throw new IllegalStateException(
+                        character.getName() + "은(는) 이번 주 주간 보스 12개를 모두 처치했습니다.");
+            }
+        }
+
         int partySize = (cmd.partySize() != null && cmd.partySize() > 1) ? cmd.partySize() : 1;
         long income = bossMaster.getCrystalPrice() / partySize;
         String description = cmd.bossName() + " " + cmd.difficulty() + " 결정석"

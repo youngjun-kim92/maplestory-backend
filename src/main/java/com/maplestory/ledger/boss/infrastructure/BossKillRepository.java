@@ -39,6 +39,21 @@ public interface BossKillRepository extends JpaRepository<BossKill, Long> {
             """, nativeQuery = true)
     List<Object[]> findWeeklyIncomeByCharacter(@Param("userId") Long userId, @Param("characterId") Long characterId);
 
+    /** 같은 캐릭터가 같은 주에 동일 보스+난이도를 이미 처치했는지 확인 */
+    boolean existsByCharacterIdAndBossNameAndDifficultyAndWeekStart(
+            Long characterId, String bossName, String difficulty, LocalDate weekStart);
+
+    /** 같은 캐릭터가 이번 주에 처치한 주간 보스(weekly) 수 */
+    @Query(value = """
+            SELECT COUNT(*) FROM boss_kills bk
+            JOIN boss_master bm ON bk.boss_name = bm.boss_name AND bk.difficulty = bm.difficulty
+            WHERE bk.character_id = :characterId
+              AND bk.week_start = :weekStart
+              AND bm.reset_type = 'weekly'
+            """, nativeQuery = true)
+    int countWeeklyBossesByCharacter(@Param("characterId") Long characterId,
+                                     @Param("weekStart") LocalDate weekStart);
+
     @Modifying
     @Query("UPDATE BossKill k SET k.ledgerEntry = null WHERE k.ledgerEntry.id = :entryId")
     void clearLedgerEntryRef(@Param("entryId") Long entryId);

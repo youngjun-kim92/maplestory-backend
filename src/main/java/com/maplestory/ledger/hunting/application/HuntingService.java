@@ -66,7 +66,7 @@ public class HuntingService {
 
         HuntingSession session = huntingSessionRepository.save(
                 HuntingSession.create(user, character, ledgerEntry,
-                        null, null, req.income(),
+                        "", 0, req.income(),
                         fragments, solErdaMesoValue, req.sessionDate(), weekStart)
         );
         return HuntingSessionResponse.from(session);
