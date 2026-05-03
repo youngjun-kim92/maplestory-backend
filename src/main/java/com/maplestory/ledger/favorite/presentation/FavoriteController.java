@@ -33,8 +33,10 @@ public class FavoriteController {
     public ResponseEntity<List<FavoriteResponse>> getFavorites(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false) Favorite.FavoriteType type,
-            @RequestParam(required = false) String bossName) {
-        return ResponseEntity.ok(favoriteService.getFavorites(userDetails.getUserId(), type, bossName));
+            @RequestParam(required = false) String bossName,
+            @RequestParam(required = false) Long characterId) {
+        return ResponseEntity.ok(favoriteService.getFavorites(
+                userDetails.getUserId(), type, bossName, characterId));
     }
 
     @DeleteMapping("/{id}")

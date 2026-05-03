@@ -9,7 +9,6 @@ import com.maplestory.ledger.boss.domain.BossDropMaster;
 import com.maplestory.ledger.boss.domain.BossDropRecord;
 import com.maplestory.ledger.boss.domain.BossKill;
 import com.maplestory.ledger.boss.domain.BossMaster;
-import com.maplestory.ledger.boss.domain.DopingMaster;
 import com.maplestory.ledger.boss.infrastructure.BossDropMasterRepository;
 import com.maplestory.ledger.boss.infrastructure.BossDropRecordRepository;
 import com.maplestory.ledger.boss.infrastructure.BossKillRepository;
@@ -123,7 +122,7 @@ public class BossService {
         BossKill kill = bossKillRepository.save(
                 BossKill.create(user, character, ledgerEntry,
                         cmd.bossName(), cmd.difficulty(), bossMaster.getCrystalPrice(),
-                        cmd.killDate(), weekStart, cmd.partySize())
+                        cmd.killDate(), weekStart, cmd.partySize(), totalExpense)
         );
         return BossKillResponse.from(kill);
     }

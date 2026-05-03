@@ -59,13 +59,18 @@ public class BossKill {
     @Column(name = "party_size")
     private Integer partySize;
 
+    /** 이 보스 처치에 함께 기록된 도핑 등 지출 합계 (메소). */
+    @Column(name = "total_expense", nullable = false)
+    private Long totalExpense = 0L;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
     public static BossKill create(User user, MapleCharacter character, LedgerEntry ledgerEntry,
                                    String bossName, String difficulty, Long crystalPrice,
-                                   LocalDate killDate, LocalDate weekStart, Integer partySize) {
+                                   LocalDate killDate, LocalDate weekStart, Integer partySize,
+                                   Long totalExpense) {
         BossKill kill = new BossKill();
         kill.user = user;
         kill.character = character;
@@ -76,6 +81,7 @@ public class BossKill {
         kill.killDate = killDate;
         kill.weekStart = weekStart;
         kill.partySize = partySize;
+        kill.totalExpense = totalExpense != null ? totalExpense : 0L;
         return kill;
     }
 }

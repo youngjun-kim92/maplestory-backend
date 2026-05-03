@@ -10,6 +10,8 @@ public record BossKillResponse(
         String bossName,
         String difficulty,
         Long crystalPrice,
+        Long income,
+        Long totalExpense,
         LocalDate killDate,
         LocalDate weekStart,
         Long characterId,
@@ -18,11 +20,15 @@ public record BossKillResponse(
         LocalDateTime createdAt
 ) {
     public static BossKillResponse from(BossKill kill) {
+        int party = kill.getPartySize() != null && kill.getPartySize() > 1 ? kill.getPartySize() : 1;
+        long income = kill.getCrystalPrice() / party;
         return new BossKillResponse(
                 kill.getId(),
                 kill.getBossName(),
                 kill.getDifficulty(),
                 kill.getCrystalPrice(),
+                income,
+                kill.getTotalExpense() != null ? kill.getTotalExpense() : 0L,
                 kill.getKillDate(),
                 kill.getWeekStart(),
                 kill.getCharacter() != null ? kill.getCharacter().getId() : null,

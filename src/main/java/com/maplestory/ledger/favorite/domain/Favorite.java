@@ -1,6 +1,7 @@
 package com.maplestory.ledger.favorite.domain;
 
 import com.maplestory.ledger.auth.domain.User;
+import com.maplestory.ledger.character.domain.MapleCharacter;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,6 +22,10 @@ public class Favorite {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "character_id")
+    private MapleCharacter character;
 
     @Column(nullable = false, length = 100)
     private String label;
@@ -55,10 +60,11 @@ public class Favorite {
         DOPING  // 도핑 비용 템플릿 (보스별 or 공통)
     }
 
-    public static Favorite createBoss(User user, String label,
+    public static Favorite createBoss(User user, MapleCharacter character, String label,
                                       String bossName, String difficulty, Integer partySize) {
         Favorite f = new Favorite();
         f.user = user;
+        f.character = character;
         f.label = label;
         f.type = FavoriteType.BOSS;
         f.bossName = bossName;
@@ -67,13 +73,11 @@ public class Favorite {
         return f;
     }
 
-    /**
-     * @param bossName 특정 보스 전용 도핑이면 보스명, 공통 도핑이면 null
-     */
-    public static Favorite createDoping(User user, String label,
+    public static Favorite createDoping(User user, MapleCharacter character, String label,
                                         String bossName, Long amount, String description) {
         Favorite f = new Favorite();
         f.user = user;
+        f.character = character;
         f.label = label;
         f.type = FavoriteType.DOPING;
         f.bossName = bossName;
