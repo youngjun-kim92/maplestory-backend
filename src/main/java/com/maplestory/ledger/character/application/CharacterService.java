@@ -36,7 +36,8 @@ public class CharacterService {
         }
         User user = userRepository.getReferenceById(userId);
         MapleCharacter character = MapleCharacter.create(
-                user, req.name(), req.jobClass(), req.level(), req.isMain(), req.initialInvestment()
+                user, req.name(), req.jobClass(), req.level(), req.isMain(),
+                req.initialInvestment(), req.solErdaFragments()
         );
         return CharacterResponse.from(characterRepository.save(character));
     }

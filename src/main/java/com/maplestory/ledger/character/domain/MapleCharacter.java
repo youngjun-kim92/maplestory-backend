@@ -48,7 +48,8 @@ public class MapleCharacter {
     private LocalDateTime createdAt;
 
     public static MapleCharacter create(User user, String name, String jobClass,
-                                        Integer level, Boolean isMain, Long initialInvestment) {
+                                        Integer level, Boolean isMain, Long initialInvestment,
+                                        Integer solErdaFragments) {
         MapleCharacter c = new MapleCharacter();
         c.user = user;
         c.name = name;
@@ -56,7 +57,7 @@ public class MapleCharacter {
         c.level = level != null ? level : 1;
         c.isMain = isMain != null ? isMain : false;
         c.initialInvestment = initialInvestment != null ? initialInvestment : 0L;
-        c.solErdaFragments = 0;
+        c.solErdaFragments = solErdaFragments != null ? solErdaFragments : 0;
         return c;
     }
 
