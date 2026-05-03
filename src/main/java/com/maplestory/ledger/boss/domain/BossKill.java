@@ -63,6 +63,10 @@ public class BossKill {
     @Column(name = "total_expense", nullable = false)
     private Long totalExpense = 0L;
 
+    /** 보스 초기화 주기 스냅샷 (weekly/daily). 주간보스 카운트 집계용. */
+    @Column(name = "reset_type", length = 20)
+    private String resetType;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -70,7 +74,7 @@ public class BossKill {
     public static BossKill create(User user, MapleCharacter character, LedgerEntry ledgerEntry,
                                    String bossName, String difficulty, Long crystalPrice,
                                    LocalDate killDate, LocalDate weekStart, Integer partySize,
-                                   Long totalExpense) {
+                                   Long totalExpense, String resetType) {
         BossKill kill = new BossKill();
         kill.user = user;
         kill.character = character;
@@ -82,6 +86,7 @@ public class BossKill {
         kill.weekStart = weekStart;
         kill.partySize = partySize;
         kill.totalExpense = totalExpense != null ? totalExpense : 0L;
+        kill.resetType = resetType;
         return kill;
     }
 }
