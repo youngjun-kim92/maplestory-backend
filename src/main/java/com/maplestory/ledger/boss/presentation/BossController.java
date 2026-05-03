@@ -10,6 +10,7 @@ import com.maplestory.ledger.boss.presentation.dto.BossDropRecordResponse;
 import com.maplestory.ledger.boss.presentation.dto.BossKillRequest;
 import com.maplestory.ledger.boss.presentation.dto.BossKillResponse;
 import com.maplestory.ledger.boss.presentation.dto.BossMasterResponse;
+import com.maplestory.ledger.boss.presentation.dto.DopingMasterResponse;
 import com.maplestory.ledger.boss.presentation.dto.RecordDropRequest;
 import com.maplestory.ledger.boss.presentation.dto.SellDropRequest;
 import com.maplestory.ledger.common.security.CustomUserDetails;
@@ -34,6 +35,12 @@ public class BossController {
     @GetMapping("/list")
     public ResponseEntity<List<BossMasterResponse>> getBossList() {
         return ResponseEntity.ok(bossService.getBossList());
+    }
+
+    /** 도핑 영약 목록 (인증 불필요) */
+    @GetMapping("/doping/list")
+    public ResponseEntity<List<DopingMasterResponse>> getDopingList() {
+        return ResponseEntity.ok(bossService.getDopingList());
     }
 
     @PostMapping("/kill")

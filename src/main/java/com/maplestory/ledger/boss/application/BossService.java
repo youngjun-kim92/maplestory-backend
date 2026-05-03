@@ -9,15 +9,18 @@ import com.maplestory.ledger.boss.domain.BossDropMaster;
 import com.maplestory.ledger.boss.domain.BossDropRecord;
 import com.maplestory.ledger.boss.domain.BossKill;
 import com.maplestory.ledger.boss.domain.BossMaster;
+import com.maplestory.ledger.boss.domain.DopingMaster;
 import com.maplestory.ledger.boss.infrastructure.BossDropMasterRepository;
 import com.maplestory.ledger.boss.infrastructure.BossDropRecordRepository;
 import com.maplestory.ledger.boss.infrastructure.BossKillRepository;
 import com.maplestory.ledger.boss.infrastructure.BossMasterRepository;
+import com.maplestory.ledger.boss.infrastructure.DopingMasterRepository;
 import com.maplestory.ledger.boss.infrastructure.projection.BossStatsProjection;
 import com.maplestory.ledger.boss.presentation.dto.BossDropMasterResponse;
 import com.maplestory.ledger.boss.presentation.dto.BossDropRecordResponse;
 import com.maplestory.ledger.boss.presentation.dto.BossKillResponse;
 import com.maplestory.ledger.boss.presentation.dto.BossMasterResponse;
+import com.maplestory.ledger.boss.presentation.dto.DopingMasterResponse;
 import com.maplestory.ledger.character.domain.MapleCharacter;
 import com.maplestory.ledger.character.infrastructure.CharacterRepository;
 import com.maplestory.ledger.common.exception.ResourceNotFoundException;
@@ -39,6 +42,7 @@ public class BossService {
     private final BossMasterRepository bossMasterRepository;
     private final BossDropMasterRepository bossDropMasterRepository;
     private final BossDropRecordRepository bossDropRecordRepository;
+    private final DopingMasterRepository dopingMasterRepository;
     private final LedgerEntryRepository ledgerEntryRepository;
     private final CharacterRepository characterRepository;
     private final UserRepository userRepository;
@@ -47,6 +51,12 @@ public class BossService {
     public List<BossMasterResponse> getBossList() {
         return bossMasterRepository.findAllByOrderByBossNameAscDifficultyAsc()
                 .stream().map(BossMasterResponse::from).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<DopingMasterResponse> getDopingList() {
+        return dopingMasterRepository.findAllByOrderBySortOrderAsc()
+                .stream().map(DopingMasterResponse::from).toList();
     }
 
     /**
