@@ -73,11 +73,12 @@ public class HuntingService {
     }
 
     @Transactional(readOnly = true)
-    public List<HuntingSessionResponse> getWeeklySessions(Long userId, LocalDate weekStartParam) {
+    public List<HuntingSessionResponse> getWeeklySessions(Long userId, LocalDate weekStartParam, Long characterId) {
         LocalDate weekStart = weekStartParam != null ? weekStartParam : WeekUtil.getWeekStart();
-        return huntingSessionRepository
-                .findByUserIdAndWeekStartOrderBySessionDateDesc(userId, weekStart)
-                .stream().map(HuntingSessionResponse::from).toList();
+        List<HuntingSession> sessions = characterId != null
+                ? huntingSessionRepository.findByUserIdAndWeekStartAndCharacterIdOrderBySessionDateDesc(userId, weekStart, characterId)
+                : huntingSessionRepository.findByUserIdAndWeekStartOrderBySessionDateDesc(userId, weekStart);
+        return sessions.stream().map(HuntingSessionResponse::from).toList();
     }
 
     @Transactional(readOnly = true)

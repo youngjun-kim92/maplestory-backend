@@ -43,10 +43,11 @@ public class LedgerService {
     private final HuntingSessionRepository huntingSessionRepository;
 
     @Transactional(readOnly = true)
-    public WeeklyLedgerResponse getWeeklyLedger(Long userId, LocalDate weekStartParam) {
+    public WeeklyLedgerResponse getWeeklyLedger(Long userId, LocalDate weekStartParam, Long characterId) {
         LocalDate weekStart = weekStartParam != null ? weekStartParam : WeekUtil.getWeekStart();
-        List<LedgerEntry> entries = ledgerEntryRepository
-                .findByUserIdAndWeekStartOrderByEntryDateDescCreatedAtDesc(userId, weekStart);
+        List<LedgerEntry> entries = characterId != null
+                ? ledgerEntryRepository.findByUserIdAndWeekStartAndCharacterIdOrderByEntryDateDescCreatedAtDesc(userId, weekStart, characterId)
+                : ledgerEntryRepository.findByUserIdAndWeekStartOrderByEntryDateDescCreatedAtDesc(userId, weekStart);
 
         long totalIncome = entries.stream()
                 .filter(e -> e.getType() == EntryType.income)

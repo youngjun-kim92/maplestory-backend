@@ -13,6 +13,9 @@ public interface HuntingSessionRepository extends JpaRepository<HuntingSession, 
 
     List<HuntingSession> findByUserIdAndWeekStartOrderBySessionDateDesc(Long userId, LocalDate weekStart);
 
+    List<HuntingSession> findByUserIdAndWeekStartAndCharacterIdOrderBySessionDateDesc(
+            Long userId, LocalDate weekStart, Long characterId);
+
     List<HuntingSession> findByUserId(Long userId);
 
     @Query(value = """

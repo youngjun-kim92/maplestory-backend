@@ -17,6 +17,9 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, Long> 
 
     List<LedgerEntry> findByUserIdAndWeekStartOrderByEntryDateDescCreatedAtDesc(Long userId, LocalDate weekStart);
 
+    List<LedgerEntry> findByUserIdAndWeekStartAndCharacterIdOrderByEntryDateDescCreatedAtDesc(
+            Long userId, LocalDate weekStart, Long characterId);
+
     Optional<LedgerEntry> findByIdAndUserId(Long id, Long userId);
 
     void deleteByUserId(Long userId);

@@ -17,6 +17,9 @@ public interface BossKillRepository extends JpaRepository<BossKill, Long> {
 
     List<BossKill> findByUserIdAndWeekStartOrderByKillDateDesc(Long userId, LocalDate weekStart);
 
+    List<BossKill> findByUserIdAndWeekStartAndCharacterIdOrderByKillDateDesc(
+            Long userId, LocalDate weekStart, Long characterId);
+
     List<BossKill> findByUserIdAndCharacterId(Long userId, Long characterId);
 
     @Query(value = """

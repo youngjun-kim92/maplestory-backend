@@ -34,8 +34,9 @@ public class HuntingController {
     @GetMapping("/sessions")
     public ResponseEntity<List<HuntingSessionResponse>> getWeeklySessions(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate week) {
-        return ResponseEntity.ok(huntingService.getWeeklySessions(userDetails.getUserId(), week));
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate week,
+            @RequestParam(required = false) Long characterId) {
+        return ResponseEntity.ok(huntingService.getWeeklySessions(userDetails.getUserId(), week, characterId));
     }
 
     @GetMapping("/stats")

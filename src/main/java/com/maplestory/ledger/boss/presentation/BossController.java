@@ -54,8 +54,9 @@ public class BossController {
     @GetMapping("/weekly")
     public ResponseEntity<List<BossKillResponse>> getWeeklyBossKills(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate week) {
-        return ResponseEntity.ok(bossService.getWeeklyBossKills(userDetails.getUserId(), week));
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate week,
+            @RequestParam(required = false) Long characterId) {
+        return ResponseEntity.ok(bossService.getWeeklyBossKills(userDetails.getUserId(), week, characterId));
     }
 
     @GetMapping("/stats")

@@ -129,11 +129,12 @@ public class BossService {
     }
 
     @Transactional(readOnly = true)
-    public List<BossKillResponse> getWeeklyBossKills(Long userId, LocalDate weekStartParam) {
+    public List<BossKillResponse> getWeeklyBossKills(Long userId, LocalDate weekStartParam, Long characterId) {
         LocalDate weekStart = weekStartParam != null ? weekStartParam : WeekUtil.getWeekStart();
-        return bossKillRepository
-                .findByUserIdAndWeekStartOrderByKillDateDesc(userId, weekStart)
-                .stream().map(BossKillResponse::from).toList();
+        List<BossKill> kills = characterId != null
+                ? bossKillRepository.findByUserIdAndWeekStartAndCharacterIdOrderByKillDateDesc(userId, weekStart, characterId)
+                : bossKillRepository.findByUserIdAndWeekStartOrderByKillDateDesc(userId, weekStart);
+        return kills.stream().map(BossKillResponse::from).toList();
     }
 
     @Transactional(readOnly = true)
