@@ -113,6 +113,7 @@ public class LedgerEntry {
         cube,
         starforce,
         spell_trace,
+        additional_option,
         doping,
         other
     }
