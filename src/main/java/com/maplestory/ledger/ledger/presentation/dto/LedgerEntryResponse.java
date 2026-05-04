@@ -18,6 +18,7 @@ public record LedgerEntryResponse(
         Long characterId,
         String characterName,
         Integer solErdaFragments,
+        Long bossKillId,
         LocalDateTime createdAt
 ) {
     public static LedgerEntryResponse from(LedgerEntry e) {
@@ -32,6 +33,7 @@ public record LedgerEntryResponse(
                 e.getCharacter() != null ? e.getCharacter().getId() : null,
                 e.getCharacter() != null ? e.getCharacter().getName() : null,
                 e.getSolErdaFragments() != null ? e.getSolErdaFragments() : 0,
+                e.getBossKillId(),
                 e.getCreatedAt()
         );
     }
