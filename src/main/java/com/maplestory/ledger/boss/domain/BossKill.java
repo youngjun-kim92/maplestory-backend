@@ -71,6 +71,14 @@ public class BossKill {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    public void updatePartySize(int partySize) {
+        this.partySize = partySize;
+    }
+
+    public void updateTotalExpense(long totalExpense) {
+        this.totalExpense = totalExpense;
+    }
+
     public static BossKill create(User user, MapleCharacter character, LedgerEntry ledgerEntry,
                                    String bossName, String difficulty, Long crystalPrice,
                                    LocalDate killDate, LocalDate weekStart, Integer partySize,

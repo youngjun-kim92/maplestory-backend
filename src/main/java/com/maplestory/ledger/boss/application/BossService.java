@@ -18,6 +18,7 @@ import com.maplestory.ledger.boss.infrastructure.projection.BossStatsProjection;
 import com.maplestory.ledger.boss.presentation.dto.BossDropMasterResponse;
 import com.maplestory.ledger.boss.presentation.dto.BossDropRecordResponse;
 import com.maplestory.ledger.boss.presentation.dto.BossKillResponse;
+import com.maplestory.ledger.boss.presentation.dto.BossKillUpdateRequest;
 import com.maplestory.ledger.boss.presentation.dto.BossMasterResponse;
 import com.maplestory.ledger.boss.presentation.dto.DopingMasterResponse;
 import com.maplestory.ledger.character.domain.MapleCharacter;
@@ -103,29 +104,102 @@ public class BossService {
                         income, description, cmd.killDate(), weekStart)
         );
 
-        // 도핑비 등 인라인 지출 처리
-        long totalExpense = 0L;
-        for (RecordBossKillCommand.InlineExpense exp : cmd.expenses()) {
-            LedgerEntry.EntryCategory cat;
-            try { cat = LedgerEntry.EntryCategory.valueOf(exp.category()); }
-            catch (IllegalArgumentException ignored) { cat = LedgerEntry.EntryCategory.other; }
-            ledgerEntryRepository.save(LedgerEntry.create(user, character,
-                    LedgerEntry.EntryType.expense, cat, exp.amount(),
-                    exp.description(), cmd.killDate(), weekStart));
-            totalExpense += exp.amount();
-        }
-
-        long newInventory = Math.max(0, user.getInventoryMeso() + income - totalExpense);
+        long newInventory = Math.max(0, user.getInventoryMeso() + income);
         user.updateMesoBalance(newInventory, user.getStorageMeso());
         userRepository.save(user);
 
         BossKill kill = bossKillRepository.save(
                 BossKill.create(user, character, ledgerEntry,
                         cmd.bossName(), cmd.difficulty(), bossMaster.getCrystalPrice(),
-                        cmd.killDate(), weekStart, cmd.partySize(), totalExpense,
+                        cmd.killDate(), weekStart, cmd.partySize(), 0L,
                         bossMaster.getResetType())
         );
+
+        // 도핑비 등 인라인 지출 처리 — boss_kill_id로 연결
+        long totalExpense = 0L;
+        for (RecordBossKillCommand.InlineExpense exp : cmd.expenses()) {
+            LedgerEntry.EntryCategory cat;
+            try { cat = LedgerEntry.EntryCategory.valueOf(exp.category()); }
+            catch (IllegalArgumentException ignored) { cat = LedgerEntry.EntryCategory.other; }
+            LedgerEntry expEntry = ledgerEntryRepository.save(LedgerEntry.create(user, character,
+                    LedgerEntry.EntryType.expense, cat, exp.amount(),
+                    exp.description(), cmd.killDate(), weekStart));
+            expEntry.linkBossKill(kill.getId());
+            ledgerEntryRepository.save(expEntry);
+            totalExpense += exp.amount();
+        }
+
+        if (totalExpense > 0) {
+            user.updateMesoBalance(Math.max(0, user.getInventoryMeso() - totalExpense), user.getStorageMeso());
+            userRepository.save(user);
+            kill.updateTotalExpense(totalExpense);
+            bossKillRepository.save(kill);
+        }
+
         return BossKillResponse.from(kill);
+    }
+
+    @Transactional
+    public void deleteBossKill(Long userId, Long killId) {
+        BossKill kill = bossKillRepository.findByIdAndUserId(killId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("보스 처치 기록을 찾을 수 없습니다."));
+
+        long income = kill.getLedgerEntry() != null ? kill.getLedgerEntry().getAmount() : 0L;
+        long totalExpense = kill.getTotalExpense() != null ? kill.getTotalExpense() : 0L;
+        Long incomeEntryId = kill.getLedgerEntry() != null ? kill.getLedgerEntry().getId() : null;
+
+        // 도핑 지출 LedgerEntry 삭제 (boss_kill_id로 연결된 것들)
+        ledgerEntryRepository.deleteByBossKillId(killId);
+
+        // BossKill 삭제 (boss_kills.ledger_entry_id FK가 있으므로 소득 항목보다 먼저)
+        bossKillRepository.delete(kill);
+
+        // 소득 LedgerEntry 삭제
+        if (incomeEntryId != null) {
+            ledgerEntryRepository.deleteById(incomeEntryId);
+        }
+
+        // 메소 역산: -(income - totalExpense)
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
+        user.updateMesoBalance(
+                Math.max(0, user.getInventoryMeso() - income + totalExpense),
+                user.getStorageMeso()
+        );
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public BossKillResponse updateBossKill(Long userId, Long killId, BossKillUpdateRequest req) {
+        BossKill kill = bossKillRepository.findByIdAndUserId(killId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("보스 처치 기록을 찾을 수 없습니다."));
+
+        int oldPartySize = kill.getPartySize() != null && kill.getPartySize() > 1 ? kill.getPartySize() : 1;
+        int newPartySize = req.partySize() != null && req.partySize() > 1 ? req.partySize() : 1;
+
+        if (oldPartySize != newPartySize) {
+            long oldIncome = kill.getCrystalPrice() / oldPartySize;
+            long newIncome = kill.getCrystalPrice() / newPartySize;
+            long delta = newIncome - oldIncome;
+
+            if (kill.getLedgerEntry() != null) {
+                LedgerEntry entry = kill.getLedgerEntry();
+                String newDesc = kill.getBossName() + " " + kill.getDifficulty() + " 결정석"
+                        + (newPartySize > 1 ? " (" + newPartySize + "인 파티 1/" + newPartySize + ")" : "");
+                entry.update(entry.getType(), entry.getCategory(), newIncome, newDesc,
+                        entry.getEntryDate(), entry.getWeekStart(), entry.getSolErdaFragments());
+                ledgerEntryRepository.save(entry);
+            }
+
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
+            user.updateMesoBalance(Math.max(0, user.getInventoryMeso() + delta), user.getStorageMeso());
+            userRepository.save(user);
+
+            kill.updatePartySize(newPartySize);
+        }
+
+        return BossKillResponse.from(bossKillRepository.save(kill));
     }
 
     @Transactional(readOnly = true)

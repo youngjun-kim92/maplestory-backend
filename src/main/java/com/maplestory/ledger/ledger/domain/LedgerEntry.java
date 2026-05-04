@@ -58,6 +58,10 @@ public class LedgerEntry {
     @Column(name = "sol_erda_fragments")
     private Integer solErdaFragments = 0;
 
+    /** 보스 처치 도핑 지출 항목을 원본 킬 기록과 연결. null이면 독립 항목. */
+    @Column(name = "boss_kill_id")
+    private Long bossKillId;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -97,6 +101,10 @@ public class LedgerEntry {
         this.entryDate = entryDate;
         this.weekStart = weekStart;
         this.solErdaFragments = solErdaFragments != null ? solErdaFragments : 0;
+    }
+
+    public void linkBossKill(Long bossKillId) {
+        this.bossKillId = bossKillId;
     }
 
     public enum EntryType {

@@ -9,6 +9,7 @@ import com.maplestory.ledger.boss.presentation.dto.BossDropMasterResponse;
 import com.maplestory.ledger.boss.presentation.dto.BossDropRecordResponse;
 import com.maplestory.ledger.boss.presentation.dto.BossKillRequest;
 import com.maplestory.ledger.boss.presentation.dto.BossKillResponse;
+import com.maplestory.ledger.boss.presentation.dto.BossKillUpdateRequest;
 import com.maplestory.ledger.boss.presentation.dto.BossMasterResponse;
 import com.maplestory.ledger.boss.presentation.dto.DopingMasterResponse;
 import com.maplestory.ledger.boss.presentation.dto.RecordDropRequest;
@@ -49,6 +50,22 @@ public class BossController {
             @Valid @RequestBody BossKillRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(bossService.recordBossKill(userDetails.getUserId(), RecordBossKillCommand.from(req)));
+    }
+
+    @PatchMapping("/kills/{id}")
+    public ResponseEntity<BossKillResponse> updateBossKill(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long id,
+            @Valid @RequestBody BossKillUpdateRequest req) {
+        return ResponseEntity.ok(bossService.updateBossKill(userDetails.getUserId(), id, req));
+    }
+
+    @DeleteMapping("/kills/{id}")
+    public ResponseEntity<Void> deleteBossKill(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long id) {
+        bossService.deleteBossKill(userDetails.getUserId(), id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/weekly")

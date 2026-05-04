@@ -28,6 +28,12 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, Long> 
     @Query("UPDATE LedgerEntry e SET e.character = null WHERE e.character.id = :characterId")
     void clearCharacterRef(@Param("characterId") Long characterId);
 
+    List<LedgerEntry> findByBossKillId(Long bossKillId);
+
+    @Modifying
+    @Query("DELETE FROM LedgerEntry e WHERE e.bossKillId = :bossKillId")
+    void deleteByBossKillId(@Param("bossKillId") Long bossKillId);
+
     @Query(value = """
             SELECT week_start as weekStart,
                    SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as totalIncome,
