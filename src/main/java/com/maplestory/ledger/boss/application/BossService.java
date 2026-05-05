@@ -20,6 +20,7 @@ import com.maplestory.ledger.boss.presentation.dto.BossDropRecordResponse;
 import com.maplestory.ledger.boss.presentation.dto.BossKillResponse;
 import com.maplestory.ledger.boss.presentation.dto.BossKillUpdateRequest;
 import com.maplestory.ledger.boss.presentation.dto.BossMasterResponse;
+import com.maplestory.ledger.boss.presentation.dto.CharacterBossCountResponse;
 import com.maplestory.ledger.boss.presentation.dto.DopingMasterResponse;
 import com.maplestory.ledger.character.domain.MapleCharacter;
 import com.maplestory.ledger.character.infrastructure.CharacterRepository;
@@ -237,6 +238,19 @@ public class BossService {
     @Transactional(readOnly = true)
     public List<BossStatsProjection> getBossStats(Long userId) {
         return bossKillRepository.findBossStats(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CharacterBossCountResponse> getWeeklyBossCountsPerCharacter(Long userId, LocalDate weekStartParam) {
+        LocalDate weekStart = weekStartParam != null ? weekStartParam : WeekUtil.getWeekStart();
+        return bossKillRepository.findWeeklyBossCountsPerCharacter(userId, weekStart)
+                .stream()
+                .map(row -> new CharacterBossCountResponse(
+                        ((Number) row[0]).longValue(),
+                        (String) row[1],
+                        ((Number) row[2]).intValue()
+                ))
+                .toList();
     }
 
     // ── 드랍 마스터 ──────────────────────────────────────────────────────────

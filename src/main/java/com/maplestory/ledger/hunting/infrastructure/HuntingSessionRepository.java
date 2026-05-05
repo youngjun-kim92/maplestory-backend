@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface HuntingSessionRepository extends JpaRepository<HuntingSession, Long> {
 
@@ -17,6 +18,8 @@ public interface HuntingSessionRepository extends JpaRepository<HuntingSession, 
             Long userId, LocalDate weekStart, Long characterId);
 
     List<HuntingSession> findByUserId(Long userId);
+
+    Optional<HuntingSession> findByIdAndUserId(Long id, Long userId);
 
     @Query(value = """
             SELECT map_name,

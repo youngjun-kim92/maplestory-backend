@@ -62,6 +62,14 @@ public class HuntingSession {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    public void update(Long income, Integer solErdaFragments, Long solErdaMesoValue, LocalDate sessionDate, LocalDate weekStart) {
+        this.income = income;
+        this.solErdaFragments = solErdaFragments != null ? solErdaFragments : 0;
+        this.solErdaMesoValue = solErdaMesoValue != null ? solErdaMesoValue : 0L;
+        this.sessionDate = sessionDate;
+        this.weekStart = weekStart;
+    }
+
     public static HuntingSession create(User user, MapleCharacter character, LedgerEntry ledgerEntry,
                                         String mapName, Integer durationMinutes, Long income,
                                         Integer solErdaFragments, Long solErdaMesoValue,

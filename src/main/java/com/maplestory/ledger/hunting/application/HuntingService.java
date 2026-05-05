@@ -10,6 +10,7 @@ import com.maplestory.ledger.hunting.domain.HuntingSession;
 import com.maplestory.ledger.hunting.infrastructure.HuntingSessionRepository;
 import com.maplestory.ledger.hunting.presentation.dto.HuntingSessionRequest;
 import com.maplestory.ledger.hunting.presentation.dto.HuntingSessionResponse;
+import com.maplestory.ledger.hunting.presentation.dto.HuntingSessionUpdateRequest;
 import com.maplestory.ledger.hunting.presentation.dto.HuntingStatsResponse;
 import com.maplestory.ledger.ledger.domain.LedgerEntry;
 import com.maplestory.ledger.ledger.infrastructure.LedgerEntryRepository;
@@ -95,6 +96,66 @@ public class HuntingService {
             ));
         }
         return result;
+    }
+
+    @Transactional
+    public HuntingSessionResponse updateSession(Long userId, Long sessionId, HuntingSessionUpdateRequest req) {
+        HuntingSession session = huntingSessionRepository.findByIdAndUserId(sessionId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("사냥 기록을 찾을 수 없습니다."));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
+
+        long oldTotal = session.getIncome() + session.getSolErdaMesoValue();
+        int newFragments = req.solErdaFragments() != null ? req.solErdaFragments() : 0;
+        long pricePerFragment = user.getSolErdaFragmentPrice() != null ? user.getSolErdaFragmentPrice() : 0L;
+        long newSolErdaMesoValue = (long) newFragments * pricePerFragment;
+        long newTotal = req.income() + newSolErdaMesoValue;
+        LocalDate weekStart = WeekUtil.getWeekStart(req.sessionDate());
+
+        if (session.getLedgerEntry() != null) {
+            LedgerEntry entry = session.getLedgerEntry();
+            entry.update(entry.getType(), entry.getCategory(), newTotal,
+                    entry.getDescription(), req.sessionDate(), weekStart, newFragments);
+            ledgerEntryRepository.save(entry);
+        }
+
+        // 솔 에르다 조각 수 보정
+        if (session.getCharacter() != null) {
+            int fragDelta = newFragments - session.getSolErdaFragments();
+            if (fragDelta != 0) {
+                session.getCharacter().addSolErdaFragments(fragDelta);
+                characterRepository.save(session.getCharacter());
+            }
+        }
+
+        user.updateMesoBalance(Math.max(0, user.getInventoryMeso() - oldTotal + newTotal), user.getStorageMeso());
+        userRepository.save(user);
+
+        session.update(req.income(), newFragments, newSolErdaMesoValue, req.sessionDate(), weekStart);
+        return HuntingSessionResponse.from(huntingSessionRepository.save(session));
+    }
+
+    @Transactional
+    public void deleteSession(Long userId, Long sessionId) {
+        HuntingSession session = huntingSessionRepository.findByIdAndUserId(sessionId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("사냥 기록을 찾을 수 없습니다."));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
+
+        long total = session.getIncome() + session.getSolErdaMesoValue();
+        Long entryId = session.getLedgerEntry() != null ? session.getLedgerEntry().getId() : null;
+
+        // 솔 에르다 조각 수 복구
+        if (session.getCharacter() != null && session.getSolErdaFragments() > 0) {
+            session.getCharacter().addSolErdaFragments(-session.getSolErdaFragments());
+            characterRepository.save(session.getCharacter());
+        }
+
+        huntingSessionRepository.delete(session);
+        if (entryId != null) ledgerEntryRepository.deleteById(entryId);
+
+        user.updateMesoBalance(Math.max(0, user.getInventoryMeso() - total), user.getStorageMeso());
+        userRepository.save(user);
     }
 
     private MapleCharacter resolveCharacter(Long userId, Long characterId) {

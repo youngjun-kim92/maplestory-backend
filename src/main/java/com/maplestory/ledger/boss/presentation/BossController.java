@@ -11,6 +11,7 @@ import com.maplestory.ledger.boss.presentation.dto.BossKillRequest;
 import com.maplestory.ledger.boss.presentation.dto.BossKillResponse;
 import com.maplestory.ledger.boss.presentation.dto.BossKillUpdateRequest;
 import com.maplestory.ledger.boss.presentation.dto.BossMasterResponse;
+import com.maplestory.ledger.boss.presentation.dto.CharacterBossCountResponse;
 import com.maplestory.ledger.boss.presentation.dto.DopingMasterResponse;
 import com.maplestory.ledger.boss.presentation.dto.RecordDropRequest;
 import com.maplestory.ledger.boss.presentation.dto.SellDropRequest;
@@ -80,6 +81,13 @@ public class BossController {
     public ResponseEntity<List<BossStatsProjection>> getBossStats(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         return ResponseEntity.ok(bossService.getBossStats(userDetails.getUserId()));
+    }
+
+    @GetMapping("/weekly/character-counts")
+    public ResponseEntity<List<CharacterBossCountResponse>> getWeeklyBossCountsPerCharacter(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate week) {
+        return ResponseEntity.ok(bossService.getWeeklyBossCountsPerCharacter(userDetails.getUserId(), week));
     }
 
     // ── 드랍 마스터 ──────────────────────────────────────────────────────────

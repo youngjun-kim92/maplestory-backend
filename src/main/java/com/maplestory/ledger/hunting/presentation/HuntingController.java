@@ -4,6 +4,7 @@ import com.maplestory.ledger.common.security.CustomUserDetails;
 import com.maplestory.ledger.hunting.application.HuntingService;
 import com.maplestory.ledger.hunting.presentation.dto.HuntingSessionRequest;
 import com.maplestory.ledger.hunting.presentation.dto.HuntingSessionResponse;
+import com.maplestory.ledger.hunting.presentation.dto.HuntingSessionUpdateRequest;
 import com.maplestory.ledger.hunting.presentation.dto.HuntingStatsResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,22 @@ public class HuntingController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate week,
             @RequestParam(required = false) Long characterId) {
         return ResponseEntity.ok(huntingService.getWeeklySessions(userDetails.getUserId(), week, characterId));
+    }
+
+    @PatchMapping("/sessions/{id}")
+    public ResponseEntity<HuntingSessionResponse> updateSession(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long id,
+            @Valid @RequestBody HuntingSessionUpdateRequest req) {
+        return ResponseEntity.ok(huntingService.updateSession(userDetails.getUserId(), id, req));
+    }
+
+    @DeleteMapping("/sessions/{id}")
+    public ResponseEntity<Void> deleteSession(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long id) {
+        huntingService.deleteSession(userDetails.getUserId(), id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/stats")
