@@ -144,9 +144,23 @@ public class BossService {
         BossKill kill = bossKillRepository.findByIdAndUserId(killId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("보스 처치 기록을 찾을 수 없습니다."));
 
-        long income = kill.getLedgerEntry() != null ? kill.getLedgerEntry().getAmount() : 0L;
+        long bossIncome = kill.getLedgerEntry() != null ? kill.getLedgerEntry().getAmount() : 0L;
         long totalExpense = kill.getTotalExpense() != null ? kill.getTotalExpense() : 0L;
         Long incomeEntryId = kill.getLedgerEntry() != null ? kill.getLedgerEntry().getId() : null;
+
+        // 판매 완료된 드랍 기록의 경매 LedgerEntry 수집 후 역산 준비
+        List<BossDropRecord> drops = bossDropRecordRepository.findByBossKillId(killId);
+        long auctionIncome = drops.stream()
+                .filter(d -> d.getStatus() == BossDropRecord.DropStatus.sold && d.getLedgerEntry() != null)
+                .mapToLong(d -> d.getLedgerEntry().getAmount())
+                .sum();
+        List<Long> auctionEntryIds = drops.stream()
+                .filter(d -> d.getStatus() == BossDropRecord.DropStatus.sold && d.getLedgerEntry() != null)
+                .map(d -> d.getLedgerEntry().getId())
+                .toList();
+
+        // 드랍 기록 삭제 (boss_kill_id FK 제약 해소)
+        bossDropRecordRepository.deleteByBossKillId(killId);
 
         // 도핑 지출 LedgerEntry 삭제 (boss_kill_id로 연결된 것들)
         ledgerEntryRepository.deleteByBossKillId(killId);
@@ -159,11 +173,16 @@ public class BossService {
             ledgerEntryRepository.deleteById(incomeEntryId);
         }
 
-        // 메소 역산: -(income - totalExpense)
+        // 판매된 드랍의 경매 LedgerEntry 삭제
+        for (Long entryId : auctionEntryIds) {
+            ledgerEntryRepository.deleteById(entryId);
+        }
+
+        // 메소 역산: 보스 수익 제거 + 도핑 지출 복구 + 경매 수익 제거
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
         user.updateMesoBalance(
-                Math.max(0, user.getInventoryMeso() - income + totalExpense),
+                Math.max(0, user.getInventoryMeso() - bossIncome + totalExpense - auctionIncome),
                 user.getStorageMeso()
         );
         userRepository.save(user);
@@ -208,7 +227,11 @@ public class BossService {
         List<BossKill> kills = characterId != null
                 ? bossKillRepository.findByUserIdAndWeekStartAndCharacterIdOrderByKillDateDesc(userId, weekStart, characterId)
                 : bossKillRepository.findByUserIdAndWeekStartOrderByKillDateDesc(userId, weekStart);
-        return kills.stream().map(BossKillResponse::from).toList();
+        return kills.stream().map(kill -> {
+            List<BossDropRecordResponse> drops = bossDropRecordRepository.findByBossKillId(kill.getId())
+                    .stream().map(BossDropRecordResponse::from).toList();
+            return BossKillResponse.from(kill, drops);
+        }).toList();
     }
 
     @Transactional(readOnly = true)

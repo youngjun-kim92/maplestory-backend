@@ -21,6 +21,10 @@ public interface BossDropRecordRepository extends JpaRepository<BossDropRecord, 
     Optional<BossDropRecord> findByIdAndUserId(Long id, Long userId);
 
     @Modifying
+    @Query("DELETE FROM BossDropRecord r WHERE r.bossKill.id = :bossKillId")
+    void deleteByBossKillId(@Param("bossKillId") Long bossKillId);
+
+    @Modifying
     @Query("UPDATE BossDropRecord r SET r.ledgerEntry = null WHERE r.ledgerEntry.id = :entryId")
     void clearLedgerEntryRef(@Param("entryId") Long entryId);
 

@@ -32,7 +32,7 @@ public class FavoriteService {
         if (req.type() == Favorite.FavoriteType.DOPING) {
             // 동일 도핑 즐겨찾기 중복 방지 — 이미 존재하면 그대로 반환
             return favoriteRepository
-                    .findExistingDoping(userId, characterId, req.bossName(), req.amount())
+                    .findExistingDoping(userId, characterId, req.bossName(), req.amount(), req.description())
                     .map(FavoriteResponse::from)
                     .orElseGet(() -> FavoriteResponse.from(favoriteRepository.save(
                             Favorite.createDoping(user, character, req.label(),

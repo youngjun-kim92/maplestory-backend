@@ -4,6 +4,7 @@ import com.maplestory.ledger.boss.domain.BossKill;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record BossKillResponse(
         Long id,
@@ -18,9 +19,14 @@ public record BossKillResponse(
         Long characterId,
         String characterName,
         Integer partySize,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        List<BossDropRecordResponse> drops
 ) {
     public static BossKillResponse from(BossKill kill) {
+        return from(kill, List.of());
+    }
+
+    public static BossKillResponse from(BossKill kill, List<BossDropRecordResponse> drops) {
         int party = kill.getPartySize() != null && kill.getPartySize() > 1 ? kill.getPartySize() : 1;
         long income = kill.getCrystalPrice() / party;
         return new BossKillResponse(
@@ -36,7 +42,8 @@ public record BossKillResponse(
                 kill.getCharacter() != null ? kill.getCharacter().getId() : null,
                 kill.getCharacter() != null ? kill.getCharacter().getName() : null,
                 kill.getPartySize(),
-                kill.getCreatedAt()
+                kill.getCreatedAt(),
+                drops
         );
     }
 }

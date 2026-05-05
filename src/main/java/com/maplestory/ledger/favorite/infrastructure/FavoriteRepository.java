@@ -29,14 +29,15 @@ public interface FavoriteRepository extends JpaRepository<Favorite, Long> {
     List<Favorite> findDopingByUserIdAndBossName(@Param("userId") Long userId,
                                                   @Param("bossName") String bossName);
 
-    /** 중복 DOPING 즐겨찾기 확인 — (userId, characterId, bossName, amount) 기준 */
+    /** 중복 DOPING 즐겨찾기 확인 — (userId, characterId, bossName, amount, description) 기준 */
     @Query("SELECT f FROM Favorite f WHERE f.user.id = :userId AND f.type = 'DOPING' " +
-           "AND f.amount = :amount AND f.bossName = :bossName " +
+           "AND f.amount = :amount AND f.description = :description AND f.bossName = :bossName " +
            "AND ((:characterId IS NULL AND f.character IS NULL) OR (f.character IS NOT NULL AND f.character.id = :characterId))")
     Optional<Favorite> findExistingDoping(@Param("userId") Long userId,
                                           @Param("characterId") Long characterId,
                                           @Param("bossName") String bossName,
-                                          @Param("amount") Long amount);
+                                          @Param("amount") Long amount,
+                                          @Param("description") String description);
 
     /** 중복 BOSS 즐겨찾기 확인 — (userId, characterId, bossName, difficulty) 기준 */
     @Query("SELECT f FROM Favorite f WHERE f.user.id = :userId AND f.type = 'BOSS' " +
