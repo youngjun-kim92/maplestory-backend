@@ -27,23 +27,40 @@ public class FavoriteService {
     public FavoriteResponse createFavorite(Long userId, FavoriteRequest req) {
         User user = userRepository.getReferenceById(userId);
         MapleCharacter character = resolveCharacter(userId, req.characterId());
+        Long characterId = character != null ? character.getId() : null;
 
-        if (req.type() == Favorite.FavoriteType.BOSS && character != null) {
-            int count = favoriteRepository.countByUserIdAndTypeAndCharacterId(
-                    userId, Favorite.FavoriteType.BOSS, character.getId());
-            if (count >= 12) {
-                throw new IllegalStateException(
-                        character.getName() + "의 즐겨찾기는 최대 12개까지 저장할 수 있습니다.");
-            }
+        if (req.type() == Favorite.FavoriteType.DOPING) {
+            // 동일 도핑 즐겨찾기 중복 방지 — 이미 존재하면 그대로 반환
+            return favoriteRepository
+                    .findExistingDoping(userId, characterId, req.bossName(), req.amount())
+                    .map(FavoriteResponse::from)
+                    .orElseGet(() -> FavoriteResponse.from(favoriteRepository.save(
+                            Favorite.createDoping(user, character, req.label(),
+                                    req.bossName(), req.amount(), req.description()))));
         }
 
-        Favorite favorite = switch (req.type()) {
-            case BOSS -> Favorite.createBoss(user, character, req.label(),
-                    req.bossName(), req.difficulty(), req.partySize());
-            case DOPING -> Favorite.createDoping(user, character, req.label(),
-                    req.bossName(), req.amount(), req.description());
-        };
-        return FavoriteResponse.from(favoriteRepository.save(favorite));
+        if (req.type() == Favorite.FavoriteType.BOSS) {
+            // 동일 보스 즐겨찾기 중복 방지 — 이미 존재하면 partySize만 업데이트
+            var existingOpt = favoriteRepository.findExistingBoss(
+                    userId, characterId, req.bossName(), req.difficulty());
+            if (existingOpt.isPresent()) {
+                return FavoriteResponse.from(existingOpt.get());
+            }
+            // 12개 제한 검증
+            if (character != null) {
+                int count = favoriteRepository.countByUserIdAndTypeAndCharacterId(
+                        userId, Favorite.FavoriteType.BOSS, character.getId());
+                if (count >= 12) {
+                    throw new IllegalStateException(
+                            character.getName() + "의 즐겨찾기는 최대 12개까지 저장할 수 있습니다.");
+                }
+            }
+            return FavoriteResponse.from(favoriteRepository.save(
+                    Favorite.createBoss(user, character, req.label(),
+                            req.bossName(), req.difficulty(), req.partySize())));
+        }
+
+        throw new IllegalArgumentException("알 수 없는 즐겨찾기 유형: " + req.type());
     }
 
     @Transactional(readOnly = true)
