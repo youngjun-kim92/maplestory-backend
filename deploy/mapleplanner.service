@@ -1,0 +1,16 @@
+[Unit]
+Description=MaplePlanner Spring Boot Backend
+After=network.target mysql.service
+
+[Service]
+User=ubuntu
+EnvironmentFile=/etc/mapleplanner/env
+ExecStart=java -Xmx512m -Dspring.profiles.active=prod -jar /home/ubuntu/app.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
