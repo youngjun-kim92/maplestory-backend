@@ -22,6 +22,5 @@ ssh -i $KEY $SERVER "sudo systemctl restart mapleplanner"
 
 Write-Host "=== 4. 프론트엔드 업로드 ===" -ForegroundColor Cyan
 scp -i $KEY -r "$FRONTEND\dist\*" "${SERVER}:/var/www/mapleplanner/"
-ssh -i $KEY $SERVER "sudo chown -R www-data:www-data /var/www/mapleplanner && sudo chmod -R 755 /var/www/mapleplanner"
 
 Write-Host "=== 완료 — http://168.107.52.15 ===" -ForegroundColor Green
