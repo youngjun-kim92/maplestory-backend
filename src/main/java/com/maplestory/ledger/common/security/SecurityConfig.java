@@ -70,10 +70,11 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOriginPatterns(List.of(
-            "http://localhost:5173",  // Vite 개발 서버
-            "http://localhost:3000",  // CRA / Next.js 개발 서버
-            "https://*.vercel.app",   // Vercel 배포 도메인
-            "https://*.netlify.app"   // Netlify 배포 도메인
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "https://mapleplanner.duckdns.org",
+            "https://*.vercel.app",
+            "https://*.netlify.app"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
